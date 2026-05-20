@@ -6,8 +6,12 @@ import { CheckCircle2, AlertCircle } from 'lucide-react'
 const SetupValidator: React.FC = () => {
   const [formData, setFormData] = useState<SetupValidation>({
     gexData: {
-      callWall: 0,
-      putWall: 0,
+      callWall1: 0,
+      callWall2: 0,
+      callWall3: 0,
+      putWall1: 0,
+      putWall2: 0,
+      putWall3: 0,
       netGEX: 0,
       gammaFlip: false,
       gammaPositive: false
@@ -17,6 +21,8 @@ const SetupValidator: React.FC = () => {
       vwapMonth: 0,
       avwapHigh: 0,
       avwapLow: 0,
+      avwapMonth: 0,
+      pocMonth: 0,
       apvpHigh: 0,
       apvpLow: 0,
       ema21: 0,
@@ -26,7 +32,9 @@ const SetupValidator: React.FC = () => {
       ivPercent: 0,
       cvdValue: 0,
       cvdEMA: 0,
+      cvdDelta: 0,
       cvdDivergence: 'none',
+      cvdDivergenceStrength: 'weak',
       institutionalVolume: false
     },
     options: {
@@ -115,19 +123,59 @@ const SetupValidator: React.FC = () => {
             {activeTab === 'gex' && (
               <div className="bg-slate-800 p-6 rounded-lg space-y-4">
                 <h2 className="text-xl font-bold text-cyan-400">🔧 GEX & GAMMA</h2>
-                <div className="grid grid-cols-2 gap-4">
-                  <InputField
-                    label="Call Wall"
-                    value={formData.gexData.callWall}
-                    onChange={(val) => handleInputChange('gexData', 'callWall', val)}
-                    placeholder="110.82"
-                  />
-                  <InputField
-                    label="Put Wall"
-                    value={formData.gexData.putWall}
-                    onChange={(val) => handleInputChange('gexData', 'putWall', val)}
-                    placeholder="98.57"
-                  />
+
+                {/* Call Walls */}
+                <div>
+                  <p className="text-sm text-green-400 font-bold mb-2">📈 CALL WALLS (Resistencia)</p>
+                  <div className="grid grid-cols-3 gap-2">
+                    <InputField
+                      label="C1"
+                      value={formData.gexData.callWall1}
+                      onChange={(val) => handleInputChange('gexData', 'callWall1', val)}
+                      placeholder="112.50"
+                    />
+                    <InputField
+                      label="C2"
+                      value={formData.gexData.callWall2}
+                      onChange={(val) => handleInputChange('gexData', 'callWall2', val)}
+                      placeholder="115.00"
+                    />
+                    <InputField
+                      label="C3"
+                      value={formData.gexData.callWall3}
+                      onChange={(val) => handleInputChange('gexData', 'callWall3', val)}
+                      placeholder="117.50"
+                    />
+                  </div>
+                </div>
+
+                {/* Put Walls */}
+                <div>
+                  <p className="text-sm text-red-400 font-bold mb-2">📉 PUT WALLS (Soporte)</p>
+                  <div className="grid grid-cols-3 gap-2">
+                    <InputField
+                      label="P1"
+                      value={formData.gexData.putWall1}
+                      onChange={(val) => handleInputChange('gexData', 'putWall1', val)}
+                      placeholder="98.50"
+                    />
+                    <InputField
+                      label="P2"
+                      value={formData.gexData.putWall2}
+                      onChange={(val) => handleInputChange('gexData', 'putWall2', val)}
+                      placeholder="96.00"
+                    />
+                    <InputField
+                      label="P3"
+                      value={formData.gexData.putWall3}
+                      onChange={(val) => handleInputChange('gexData', 'putWall3', val)}
+                      placeholder="93.50"
+                    />
+                  </div>
+                </div>
+
+                {/* Gamma Info */}
+                <div className="grid grid-cols-2 gap-4 pt-2 border-t border-slate-600">
                   <InputField
                     label="Net GEX (M)"
                     value={formData.gexData.netGEX}
@@ -167,6 +215,18 @@ const SetupValidator: React.FC = () => {
                     label="AVWAP Low"
                     value={formData.priceAction.avwapLow}
                     onChange={(val) => handleInputChange('priceAction', 'avwapLow', val)}
+                  />
+                  <InputField
+                    label="AVWAP Month"
+                    value={formData.priceAction.avwapMonth}
+                    onChange={(val) => handleInputChange('priceAction', 'avwapMonth', val)}
+                    placeholder="Tendencia mensual"
+                  />
+                  <InputField
+                    label="POC Month"
+                    value={formData.priceAction.pocMonth}
+                    onChange={(val) => handleInputChange('priceAction', 'pocMonth', val)}
+                    placeholder="Máximo volumen"
                   />
                   <InputField
                     label="APVP High"
@@ -212,11 +272,23 @@ const SetupValidator: React.FC = () => {
                     value={formData.volatilityCVD.cvdEMA}
                     onChange={(val) => handleInputChange('volatilityCVD', 'cvdEMA', val)}
                   />
+                  <InputField
+                    label="CVD Delta (velocidad)"
+                    value={formData.volatilityCVD.cvdDelta}
+                    onChange={(val) => handleInputChange('volatilityCVD', 'cvdDelta', val)}
+                    placeholder="Cambio en CVD"
+                  />
                   <SelectField
                     label="CVD Divergence"
                     value={formData.volatilityCVD.cvdDivergence}
                     options={['none', 'bullish', 'bearish']}
                     onChange={(val) => handleInputChange('volatilityCVD', 'cvdDivergence', val)}
+                  />
+                  <SelectField
+                    label="Divergence Strength"
+                    value={formData.volatilityCVD.cvdDivergenceStrength}
+                    options={['weak', 'medium', 'strong']}
+                    onChange={(val) => handleInputChange('volatilityCVD', 'cvdDivergenceStrength', val)}
                   />
                   <CheckboxField
                     label="Institutional Volume"

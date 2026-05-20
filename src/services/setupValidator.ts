@@ -161,11 +161,11 @@ export class SetupValidatorService {
   }
 
   private static calculateTargetSL(setup: SetupValidation, entry: number): number {
-    // Stop Loss al -200% o si cruza muro de GEX
+    // Stop Loss al -200% o si cruza muro de GEX (P1/C1 = muros más cercanos)
     if (setup.options.optionType === 'put') {
-      return Math.max(entry * 1.03, setup.gexData.putWall * 1.01)
+      return Math.max(entry * 1.03, setup.gexData.putWall1 * 1.01)
     } else {
-      return Math.min(entry * 0.97, setup.gexData.callWall * 0.99)
+      return Math.min(entry * 0.97, setup.gexData.callWall1 * 0.99)
     }
   }
 

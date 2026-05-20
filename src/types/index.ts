@@ -1,28 +1,59 @@
 // Setup Validation Types
 export interface GEXData {
-  callWall: number
-  putWall: number
+  // Call Walls (Resistencia)
+  callWall1: number  // C1 - Muro más cercano
+  callWall2: number  // C2 - Muro intermedio
+  callWall3: number  // C3 - Muro lejano
+
+  // Put Walls (Soporte)
+  putWall1: number   // P1 - Muro más cercano
+  putWall2: number   // P2 - Muro intermedio
+  putWall3: number   // P3 - Muro lejano
+
+  // Net GEX
   netGEX: number
   gammaFlip: boolean
   gammaPositive: boolean
 }
 
 export interface PriceActionData {
+  // Precio Actual
   currentPrice: number
+
+  // VWAP (Volumen Ponderado)
   vwapMonth: number
+
+  // AVWAP (Anchored VWAP)
   avwapHigh: number
   avwapLow: number
+  avwapMonth: number  // AVWAP Mensual
+
+  // Point of Control (Máximo Volumen)
+  pocMonth: number    // POC Mensual
+
+  // APVP (Volume Profile)
   apvpHigh: number
   apvpLow: number
+
+  // Medias Móviles
   ema21: number
   sma200: number
 }
 
 export interface VolatilityCVDData {
+  // IV (Implied Volatility)
   ivPercent: number
+
+  // CVD (Cumulative Volume Delta)
   cvdValue: number
   cvdEMA: number
+  cvdDelta: number        // Cambio en CVD (velocidad)
+
+  // Divergencia
   cvdDivergence: 'bullish' | 'bearish' | 'none'
+  cvdDivergenceStrength: 'weak' | 'medium' | 'strong'  // Fuerza de divergencia
+
+  // Volumen
   institutionalVolume: boolean
 }
 
