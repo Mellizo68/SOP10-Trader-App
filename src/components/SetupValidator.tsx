@@ -1,0 +1,416 @@
+import React, { useState } from 'react'
+import { SetupValidation, ValidationResult } from '../types'
+import { SetupValidatorService } from '../services/setupValidator'
+import { CheckCircle2, AlertCircle, TrendingUp, TrendingDown } from 'lucide-react'
+
+const SetupValidator: React.FC = () => {
+  const [formData, setFormData] = useState<SetupValidation>({
+    gexData: {
+      callWall: 0,
+      putWall: 0,
+      netGEX: 0,
+      gammaFlip: false,
+      gammaPositive: false
+    },
+    priceAction: {
+      currentPrice: 0,
+      vwapMonth: 0,
+      avwapHigh: 0,
+      avwapLow: 0,
+      apvpHigh: 0,
+      apvpLow: 0,
+      ema21: 0,
+      sma200: 0
+    },
+    volatilityCVD: {
+      ivPercent: 0,
+      cvdValue: 0,
+      cvdEMA: 0,
+      cvdDivergence: 'none',
+      institutionalVolume: false
+    },
+    options: {
+      symbol: 'SPY',
+      strategy: 'PUT_CREDIT_SPREAD',
+      strikePrice: 0,
+      delta: 0,
+      gamma: 0,
+      vega: 0,
+      theta: 0,
+      daysToExpiration: 0,
+      optionType: 'put'
+    },
+    timestamp: new Date(),
+    screenshots: {},
+    comments: ''
+  })
+
+  const [result, setResult] = useState<ValidationResult | null>(null)
+  const [activeTab, setActiveTab] = useState<'gex' | 'price' | 'vol' | 'options'>('gex')
+
+  const handleAnalyze = () => {
+    const validation = SetupValidatorService.validateSetup(formData)
+    setResult(validation)
+  }
+
+  const handleInputChange = (section: string, field: string, value: any) => {
+    setFormData(prev => ({
+      ...prev,
+      [section]: {
+        ...prev[section as keyof SetupValidation],
+        [field]: value
+      }
+    }))
+  }
+
+  const ConfluenceScoreBadge = ({ score }: { score: number }) => {
+    const getColor = () => {
+      if (score >= 80) return 'bg-green-500'
+      if (score >= 65) return 'bg-yellow-500'
+      return 'bg-red-500'
+    }
+
+    return (
+      <div className={`${getColor()} text-white px-6 py-3 rounded-lg font-bold text-2xl`}>
+        {score}/100 ✓
+      </div>
+    )
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white p-4">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold mb-2 flex items-center gap-3">
+            <span className="text-2xl">🎯</span> SOP10 Setup Validator
+          </h1>
+          <p className="text-gray-400">Validación profesional de setups de opciones</p>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Input Panel */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Tabs */}
+            <div className="flex gap-2 bg-slate-800 p-1 rounded-lg">
+              {['gex', 'price', 'vol', 'options'].map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab as any)}
+                  className={`flex-1 px-4 py-2 rounded transition-all ${
+                    activeTab === tab
+                      ? 'bg-blue-600 text-white'
+                      : 'text-gray-400 hover:text-white'
+                  }`}
+                >
+                  {tab.toUpperCase()}
+                </button>
+              ))}
+            </div>
+
+            {/* GEX Tab */}
+            {activeTab === 'gex' && (
+              <div className="bg-slate-800 p-6 rounded-lg space-y-4">
+                <h2 className="text-xl font-bold text-cyan-400">🔧 GEX & GAMMA</h2>
+                <div className="grid grid-cols-2 gap-4">
+                  <InputField
+                    label="Call Wall"
+                    value={formData.gexData.callWall}
+                    onChange={(val) => handleInputChange('gexData', 'callWall', val)}
+                    placeholder="110.82"
+                  />
+                  <InputField
+                    label="Put Wall"
+                    value={formData.gexData.putWall}
+                    onChange={(val) => handleInputChange('gexData', 'putWall', val)}
+                    placeholder="98.57"
+                  />
+                  <InputField
+                    label="Net GEX (M)"
+                    value={formData.gexData.netGEX}
+                    onChange={(val) => handleInputChange('gexData', 'netGEX', val)}
+                    placeholder="577.6"
+                  />
+                  <CheckboxField
+                    label="Gamma Positivo"
+                    checked={formData.gexData.gammaPositive}
+                    onChange={(val) => handleInputChange('gexData', 'gammaPositive', val)}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Price Action Tab */}
+            {activeTab === 'price' && (
+              <div className="bg-slate-800 p-6 rounded-lg space-y-4">
+                <h2 className="text-xl font-bold text-green-400">💹 PRICE ACTION</h2>
+                <div className="grid grid-cols-2 gap-4">
+                  <InputField
+                    label="Current Price"
+                    value={formData.priceAction.currentPrice}
+                    onChange={(val) => handleInputChange('priceAction', 'currentPrice', val)}
+                  />
+                  <InputField
+                    label="VWAP (Month)"
+                    value={formData.priceAction.vwapMonth}
+                    onChange={(val) => handleInputChange('priceAction', 'vwapMonth', val)}
+                  />
+                  <InputField
+                    label="AVWAP High"
+                    value={formData.priceAction.avwapHigh}
+                    onChange={(val) => handleInputChange('priceAction', 'avwapHigh', val)}
+                  />
+                  <InputField
+                    label="AVWAP Low"
+                    value={formData.priceAction.avwapLow}
+                    onChange={(val) => handleInputChange('priceAction', 'avwapLow', val)}
+                  />
+                  <InputField
+                    label="APVP High"
+                    value={formData.priceAction.apvpHigh}
+                    onChange={(val) => handleInputChange('priceAction', 'apvpHigh', val)}
+                  />
+                  <InputField
+                    label="APVP Low"
+                    value={formData.priceAction.apvpLow}
+                    onChange={(val) => handleInputChange('priceAction', 'apvpLow', val)}
+                  />
+                  <InputField
+                    label="EMA21"
+                    value={formData.priceAction.ema21}
+                    onChange={(val) => handleInputChange('priceAction', 'ema21', val)}
+                  />
+                  <InputField
+                    label="SMA200"
+                    value={formData.priceAction.sma200}
+                    onChange={(val) => handleInputChange('priceAction', 'sma200', val)}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Volatility & CVD Tab */}
+            {activeTab === 'vol' && (
+              <div className="bg-slate-800 p-6 rounded-lg space-y-4">
+                <h2 className="text-xl font-bold text-yellow-400">📈 VOLATILITY & CVD</h2>
+                <div className="grid grid-cols-2 gap-4">
+                  <InputField
+                    label="IV Percent (%)"
+                    value={formData.volatilityCVD.ivPercent}
+                    onChange={(val) => handleInputChange('volatilityCVD', 'ivPercent', val)}
+                  />
+                  <InputField
+                    label="CVD Value"
+                    value={formData.volatilityCVD.cvdValue}
+                    onChange={(val) => handleInputChange('volatilityCVD', 'cvdValue', val)}
+                  />
+                  <InputField
+                    label="CVD EMA"
+                    value={formData.volatilityCVD.cvdEMA}
+                    onChange={(val) => handleInputChange('volatilityCVD', 'cvdEMA', val)}
+                  />
+                  <SelectField
+                    label="CVD Divergence"
+                    value={formData.volatilityCVD.cvdDivergence}
+                    options={['none', 'bullish', 'bearish']}
+                    onChange={(val) => handleInputChange('volatilityCVD', 'cvdDivergence', val)}
+                  />
+                  <CheckboxField
+                    label="Institutional Volume"
+                    checked={formData.volatilityCVD.institutionalVolume}
+                    onChange={(val) => handleInputChange('volatilityCVD', 'institutionalVolume', val)}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Options Tab */}
+            {activeTab === 'options' && (
+              <div className="bg-slate-800 p-6 rounded-lg space-y-4">
+                <h2 className="text-xl font-bold text-purple-400">⚙️ OPTIONS</h2>
+                <div className="grid grid-cols-2 gap-4">
+                  <InputField
+                    label="Symbol"
+                    value={formData.options.symbol}
+                    onChange={(val) => handleInputChange('options', 'symbol', val)}
+                  />
+                  <SelectField
+                    label="Strategy"
+                    value={formData.options.strategy}
+                    options={['PUT_CREDIT_SPREAD', 'CALL_CREDIT_SPREAD', 'IRON_CONDOR', 'IRON_BUTTERFLY']}
+                    onChange={(val) => handleInputChange('options', 'strategy', val)}
+                  />
+                  <InputField
+                    label="Strike Price"
+                    value={formData.options.strikePrice}
+                    onChange={(val) => handleInputChange('options', 'strikePrice', val)}
+                  />
+                  <InputField
+                    label="Delta"
+                    value={formData.options.delta}
+                    onChange={(val) => handleInputChange('options', 'delta', val)}
+                  />
+                  <InputField
+                    label="DTE (Days)"
+                    value={formData.options.daysToExpiration}
+                    onChange={(val) => handleInputChange('options', 'daysToExpiration', val)}
+                  />
+                  <SelectField
+                    label="Option Type"
+                    value={formData.options.optionType}
+                    options={['call', 'put']}
+                    onChange={(val) => handleInputChange('options', 'optionType', val as any)}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Analyze Button */}
+            <button
+              onClick={handleAnalyze}
+              className="w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-all text-lg"
+            >
+              🔍 ANALIZAR SETUP
+            </button>
+          </div>
+
+          {/* Results Panel */}
+          <div className="space-y-4">
+            {result && (
+              <>
+                {/* Confluence Score */}
+                <div className="bg-slate-800 p-6 rounded-lg text-center">
+                  <p className="text-gray-400 mb-3">CONFLUENCE SCORE</p>
+                  <ConfluenceScoreBadge score={result.confluenceScore} />
+                  <p className={`mt-3 font-bold ${result.isValidSetup ? 'text-green-400' : 'text-red-400'}`}>
+                    {result.isValidSetup ? '✅ SETUP VÁLIDO' : '❌ SETUP INVÁLIDO'}
+                  </p>
+                </div>
+
+                {/* Recommendation */}
+                <div className="bg-slate-800 p-6 rounded-lg">
+                  <p className="text-gray-400 mb-3 font-bold">RECOMENDACIÓN</p>
+                  <p className="text-2xl font-bold text-cyan-400">{result.recommendation}</p>
+                  <div className="mt-4 space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span>Entry Target:</span>
+                      <span className="font-bold">${result.targetEntry.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Take Profit:</span>
+                      <span className="font-bold text-green-400">${result.targetTP.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Stop Loss:</span>
+                      <span className="font-bold text-red-400">${result.targetSL.toFixed(2)}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Checks */}
+                <div className="bg-slate-800 p-6 rounded-lg">
+                  <p className="text-gray-400 mb-3 font-bold">VALIDACIÓN</p>
+                  <div className="space-y-2 text-sm">
+                    {Object.entries(result.checks).map(([check, passed]) => (
+                      <div key={check} className="flex items-center gap-2">
+                        {passed ? (
+                          <CheckCircle2 className="w-4 h-4 text-green-500" />
+                        ) : (
+                          <AlertCircle className="w-4 h-4 text-red-500" />
+                        )}
+                        <span>{check.replace(/([A-Z])/g, ' $1').trim()}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Warnings */}
+                {result.warnings.length > 0 && (
+                  <div className="bg-yellow-900 bg-opacity-30 border border-yellow-700 p-4 rounded-lg">
+                    <p className="text-yellow-400 font-bold mb-2">⚠️ ADVERTENCIAS</p>
+                    <ul className="text-sm space-y-1">
+                      {result.warnings.map((warning, i) => (
+                        <li key={i}>{warning}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Notes */}
+                {result.notes.length > 0 && (
+                  <div className="bg-blue-900 bg-opacity-30 border border-blue-700 p-4 rounded-lg">
+                    <p className="text-blue-400 font-bold mb-2">📝 NOTAS</p>
+                    <ul className="text-sm space-y-1">
+                      {result.notes.map((note, i) => (
+                        <li key={i}>{note}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Input Components
+const InputField: React.FC<{
+  label: string
+  value: number | string
+  onChange: (value: number | string) => void
+  placeholder?: string
+}> = ({ label, value, onChange, placeholder }) => (
+  <div>
+    <label className="block text-sm text-gray-400 mb-1">{label}</label>
+    <input
+      type="number"
+      value={value}
+      onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
+      placeholder={placeholder}
+      className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-white placeholder-gray-500"
+    />
+  </div>
+)
+
+const CheckboxField: React.FC<{
+  label: string
+  checked: boolean
+  onChange: (checked: boolean) => void
+}> = ({ label, checked, onChange }) => (
+  <div className="flex items-center gap-2">
+    <input
+      type="checkbox"
+      checked={checked}
+      onChange={(e) => onChange(e.target.checked)}
+      className="w-4 h-4"
+    />
+    <label className="text-sm text-gray-400">{label}</label>
+  </div>
+)
+
+const SelectField: React.FC<{
+  label: string
+  value: string
+  options: string[]
+  onChange: (value: string) => void
+}> = ({ label, value, options, onChange }) => (
+  <div>
+    <label className="block text-sm text-gray-400 mb-1">{label}</label>
+    <select
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-white"
+    >
+      {options.map((opt) => (
+        <option key={opt} value={opt}>
+          {opt}
+        </option>
+      ))}
+    </select>
+  </div>
+)
+
+export default SetupValidator
