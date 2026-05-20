@@ -111,13 +111,17 @@ export class SetupValidatorService {
     }
 
     const isBullish = setup.priceAction.currentPrice > setup.priceAction.ema21
+    const strategy = setup.options.strategy
 
-    if (setup.options.strategy.includes('CALL')) {
-      return isBullish ? 'SELL_CALL' : 'BUY_PUT'
-    } else if (setup.options.strategy.includes('PUT')) {
-      return !isBullish ? 'SELL_PUT' : 'BUY_CALL'
-    } else if (setup.options.strategy === 'IRON_CONDOR') {
+    // Credit spreads (preferidos para vender)
+    if (strategy === 'PUT_CREDIT_SPREAD') {
+      return isBullish ? 'SELL_PUT_CREDIT_SPREAD' : 'WAIT'
+    } else if (strategy === 'CALL_CREDIT_SPREAD') {
+      return !isBullish ? 'SELL_CALL_CREDIT_SPREAD' : 'WAIT'
+    } else if (strategy === 'IRON_CONDOR') {
       return 'IRON_CONDOR'
+    } else if (strategy === 'IRON_BUTTERFLY') {
+      return 'IRON_BUTTERFLY'
     }
 
     return 'WAIT'

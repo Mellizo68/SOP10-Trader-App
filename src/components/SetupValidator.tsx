@@ -371,7 +371,8 @@ const InputField: React.FC<{
     <input
       type="number"
       value={value}
-      onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
+      onChange={(e) => onChange(e.target.value === '' ? '' : parseFloat(e.target.value) || 0)}
+      onBlur={(e) => onChange(e.target.value === '' ? 0 : parseFloat(e.target.value) || 0)}
       placeholder={placeholder}
       className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-white placeholder-gray-500"
     />
