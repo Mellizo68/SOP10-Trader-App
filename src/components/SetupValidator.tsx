@@ -31,7 +31,7 @@ const SetupValidator: React.FC = () => {
     },
     options: {
       symbol: 'SPY',
-      strategy: 'PUT_CREDIT_SPREAD',
+      strategy: 'BULL_PUT_SPREAD',
       strikePrice: 0,
       delta: 0,
       gamma: 0,
@@ -240,7 +240,7 @@ const SetupValidator: React.FC = () => {
                   <SelectField
                     label="Strategy"
                     value={formData.options.strategy}
-                    options={['PUT_CREDIT_SPREAD', 'CALL_CREDIT_SPREAD', 'PUT_DEBIT_SPREAD', 'CALL_DEBIT_SPREAD', 'IRON_CONDOR', 'IRON_BUTTERFLY']}
+                    options={['BULL_PUT_SPREAD', 'BEAR_CALL_SPREAD', 'BULL_CALL_SPREAD', 'BEAR_PUT_SPREAD', 'IRON_CONDOR', 'IRON_BUTTERFLY', 'LONG_CALL', 'LONG_PUT', 'STRADDLE', 'STRANGLE', 'COLLAR', 'COVERED_CALL', 'PROTECTIVE_PUT']}
                     onChange={(val) => handleInputChange('options', 'strategy', val)}
                   />
                   <InputField
@@ -294,6 +294,22 @@ const SetupValidator: React.FC = () => {
                 <div className="bg-slate-800 p-6 rounded-lg">
                   <p className="text-gray-400 mb-3 font-bold">RECOMENDACIÓN</p>
                   <p className="text-2xl font-bold text-cyan-400">{result.recommendation}</p>
+
+                  {/* Alternatives */}
+                  {result.alternatives && result.alternatives.length > 0 && (
+                    <div className="mt-4 pt-4 border-t border-slate-600">
+                      <p className="text-gray-400 mb-2 text-sm font-bold">ALTERNATIVAS:</p>
+                      <div className="space-y-2">
+                        {result.alternatives.map((alt, i) => (
+                          <div key={i} className="text-xs bg-slate-700 p-2 rounded">
+                            <span className="text-amber-400 font-bold">{alt.strategy}</span>
+                            <p className="text-gray-300 mt-1">{alt.reason}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   <div className="mt-4 space-y-2 text-sm">
                     <div className="flex justify-between">
                       <span>Entry Target:</span>

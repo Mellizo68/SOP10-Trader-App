@@ -28,7 +28,7 @@ export interface VolatilityCVDData {
 
 export interface OptionsData {
   symbol: string
-  strategy: 'CALL_CREDIT_SPREAD' | 'PUT_CREDIT_SPREAD' | 'CALL_DEBIT_SPREAD' | 'PUT_DEBIT_SPREAD' | 'IRON_CONDOR' | 'IRON_BUTTERFLY'
+  strategy: 'BULL_PUT_SPREAD' | 'BEAR_CALL_SPREAD' | 'BULL_CALL_SPREAD' | 'BEAR_PUT_SPREAD' | 'IRON_CONDOR' | 'IRON_BUTTERFLY' | 'LONG_CALL' | 'LONG_PUT' | 'STRADDLE' | 'STRANGLE' | 'COLLAR' | 'COVERED_CALL' | 'PROTECTIVE_PUT'
   strikePrice: number
   delta: number
   gamma: number
@@ -52,6 +52,11 @@ export interface SetupValidation {
   comments: string
 }
 
+export interface AlternativeRecommendation {
+  strategy: string
+  reason: string
+}
+
 export interface ValidationResult {
   confluenceScore: number // 0-100
   isValidSetup: boolean
@@ -64,7 +69,8 @@ export interface ValidationResult {
     dteCheck: boolean
     deltaCheck: boolean
   }
-  recommendation: 'PUT_CREDIT_SPREAD' | 'CALL_CREDIT_SPREAD' | 'PUT_DEBIT_SPREAD' | 'CALL_DEBIT_SPREAD' | 'IRON_CONDOR' | 'IRON_BUTTERFLY' | 'WAIT'
+  recommendation: string // Recomendación principal
+  alternatives: AlternativeRecommendation[] // Alternativas válidas
   targetEntry: number
   targetTP: number // 50% de prima en crédito, 200% en débito
   targetSL: number // -200%

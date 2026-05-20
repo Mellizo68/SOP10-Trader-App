@@ -17,7 +17,7 @@ export class SetupValidatorService {
 
     const confluenceScore = this.calculateConfluenceScore(checks, setup)
     const isValidSetup = confluenceScore >= 65
-    const recommendation = this.getRecommendation(setup, isValidSetup)
+    const { recommendation, alternatives } = this.getRecommendation(setup, isValidSetup)
     const warnings = this.getWarnings(setup, checks)
 
     // Calcular targets
@@ -30,6 +30,7 @@ export class SetupValidatorService {
       isValidSetup,
       checks,
       recommendation,
+      alternatives,
       targetEntry,
       targetTP,
       targetSL,
@@ -105,30 +106,42 @@ export class SetupValidatorService {
     return Math.round(score)
   }
 
-  private static getRecommendation(setup: SetupValidation, isValidSetup: boolean): ValidationResult['recommendation'] {
+  private static getRecommendation(setup: SetupValidation, isValidSetup: boolean): { recommendation: string; alternatives: Array<{ strategy: string; reason: string }> } {
+    const alternatives: Array<{ strategy: string; reason: string }> = []
+
     if (!isValidSetup) {
-      return 'WAIT'
+      return { recommendation: 'WAIT', alternatives: [] }
     }
 
     const isBullish = setup.priceAction.currentPrice > setup.priceAction.ema21
-    const strategy = setup.options.strategy
 
-    // Credit spreads (preferidos para vender)
-    if (strategy === 'PUT_CREDIT_SPREAD') {
-      return isBullish ? 'PUT_CREDIT_SPREAD' : 'WAIT'
-    } else if (strategy === 'CALL_CREDIT_SPREAD') {
-      return !isBullish ? 'CALL_CREDIT_SPREAD' : 'WAIT'
-    } else if (strategy === 'IRON_CONDOR') {
-      return 'IRON_CONDOR'
-    } else if (strategy === 'IRON_BUTTERFLY') {
-      return 'IRON_BUTTERFLY'
-    } else if (strategy === 'PUT_DEBIT_SPREAD') {
-      return !isBullish ? 'PUT_DEBIT_SPREAD' : 'WAIT'
-    } else if (strategy === 'CALL_DEBIT_SPREAD') {
-      return isBullish ? 'CALL_DEBIT_SPREAD' : 'WAIT'
+    // BULLISH tendencia
+    if (isBullish) {
+      alternatives.push({ strategy: 'BULL_CALL_SPREAD', reason: 'Si esperas movimiento alcista fuerte' })
+      alternatives.push({ strategy: 'LONG_CALL', reason: 'Si esperas rally explosivo' })
+      return {
+        recommendation: 'BULL_PUT_SPREAD',
+        alternatives
+      }
     }
 
-    return 'WAIT'
+    // BEARISH tendencia
+    if (!isBullish) {
+      alternatives.push({ strategy: 'BEAR_CALL_SPREAD', reason: 'Si esperas movimiento bajista fuerte' })
+      alternatives.push({ strategy: 'BEAR_PUT_SPREAD', reason: 'Si quieres dirección clara bajista' })
+      return {
+        recommendation: 'BEAR_CALL_SPREAD',
+        alternatives
+      }
+    }
+
+    // NEUTRAL (debería filtrar mejor esto)
+    alternatives.push({ strategy: 'IRON_BUTTERFLY', reason: 'Si esperas muy poco movimiento' })
+    alternatives.push({ strategy: 'STRADDLE', reason: 'Si esperas gran movimiento incierto' })
+    return {
+      recommendation: 'IRON_CONDOR',
+      alternatives
+    }
   }
 
   private static calculateTargetEntry(setup: SetupValidation): number {
