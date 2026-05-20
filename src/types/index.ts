@@ -86,6 +86,7 @@ export interface SetupValidation {
 export interface AlternativeRecommendation {
   strategy: string
   reason: string
+  trendCompatibility: number  // 0-100: Qué tan compatible es con la tendencia actual
 }
 
 export interface ValidationResult {

@@ -106,41 +106,71 @@ export class SetupValidatorService {
     return Math.round(score)
   }
 
-  private static getRecommendation(setup: SetupValidation, isValidSetup: boolean): { recommendation: string; alternatives: Array<{ strategy: string; reason: string }> } {
-    const alternatives: Array<{ strategy: string; reason: string }> = []
+  private static getRecommendation(setup: SetupValidation, isValidSetup: boolean): { recommendation: string; alternatives: Array<{ strategy: string; reason: string; trendCompatibility: number }> } {
+    const alternatives: Array<{ strategy: string; reason: string; trendCompatibility: number }> = []
 
     if (!isValidSetup) {
       return { recommendation: 'WAIT', alternatives: [] }
     }
 
     const isBullish = setup.priceAction.currentPrice > setup.priceAction.ema21
+    const trend = isBullish ? 'BULLISH' : 'BEARISH'
 
-    // BULLISH tendencia
+    // Estrategias con su compatibilidad por tendencia
+    const strategyCompatibility = {
+      BULL_PUT_SPREAD: isBullish ? 95 : 30,       // Óptima bullish, pobre bearish
+      BEAR_CALL_SPREAD: !isBullish ? 95 : 30,     // Óptima bearish, pobre bullish
+      BULL_CALL_SPREAD: isBullish ? 90 : 25,      // Muy buena bullish
+      BEAR_PUT_SPREAD: !isBullish ? 90 : 25,      // Muy buena bearish
+      LONG_CALL: isBullish ? 95 : 35,             // Excelente bullish
+      LONG_PUT: !isBullish ? 95 : 35,             // Excelente bearish
+      IRON_CONDOR: 70,                             // Neutral - siempre funciona
+      IRON_BUTTERFLY: 75,                          // Neutral - muy restrictivo
+      STRADDLE: 60,                                // Neutral - depende volatilidad
+      STRANGLE: 65,                                // Neutral - menos restrictivo que straddle
+      COLLAR: 70,                                  // Neutral - protección
+      COVERED_CALL: isBullish ? 50 : 60,          // Mejor bearish (protección)
+      PROTECTIVE_PUT: !isBullish ? 50 : 60        // Mejor bullish (protección)
+    }
+
+    // Recomendación principal: según tendencia
+    let mainRecommendation = 'IRON_CONDOR'
     if (isBullish) {
-      alternatives.push({ strategy: 'BULL_CALL_SPREAD', reason: 'Si esperas movimiento alcista fuerte' })
-      alternatives.push({ strategy: 'LONG_CALL', reason: 'Si esperas rally explosivo' })
-      return {
-        recommendation: 'BULL_PUT_SPREAD',
-        alternatives
-      }
+      mainRecommendation = 'BULL_PUT_SPREAD'
+    } else {
+      mainRecommendation = 'BEAR_CALL_SPREAD'
     }
 
-    // BEARISH tendencia
-    if (!isBullish) {
-      alternatives.push({ strategy: 'BEAR_CALL_SPREAD', reason: 'Si esperas movimiento bajista fuerte' })
-      alternatives.push({ strategy: 'BEAR_PUT_SPREAD', reason: 'Si quieres dirección clara bajista' })
-      return {
-        recommendation: 'BEAR_CALL_SPREAD',
-        alternatives
-      }
-    }
+    // Alternativas: todas las estrategias, ordenadas por compatibilidad
+    Object.entries(strategyCompatibility).forEach(([strategy, compatibility]) => {
+      if (strategy !== mainRecommendation) {
+        let reason = ''
+        if (compatibility >= 90) {
+          reason = `Excelente compatibilidad con tendencia ${trend}`
+        } else if (compatibility >= 70) {
+          reason = `Buena compatibilidad con tendencia ${trend}`
+        } else if (compatibility >= 50) {
+          reason = `Compatible con tendencia ${trend}`
+        } else if (compatibility >= 30) {
+          reason = `Baja compatibilidad con tendencia ${trend} (alternativa defensiva)`
+        } else {
+          reason = `Contraria a tendencia ${trend} (apuesta contraria)`
+        }
 
-    // NEUTRAL (debería filtrar mejor esto)
-    alternatives.push({ strategy: 'IRON_BUTTERFLY', reason: 'Si esperas muy poco movimiento' })
-    alternatives.push({ strategy: 'STRADDLE', reason: 'Si esperas gran movimiento incierto' })
+        alternatives.push({
+          strategy,
+          reason,
+          trendCompatibility: compatibility as number
+        })
+      }
+    })
+
+    // Ordenar alternativas por compatibilidad (descendente)
+    alternatives.sort((a, b) => b.trendCompatibility - a.trendCompatibility)
+
     return {
-      recommendation: 'IRON_CONDOR',
-      alternatives
+      recommendation: mainRecommendation,
+      alternatives: alternatives.slice(0, 5)  // Top 5 alternativas
     }
   }
 

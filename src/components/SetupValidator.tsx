@@ -370,14 +370,27 @@ const SetupValidator: React.FC = () => {
                   {/* Alternatives */}
                   {result.alternatives && result.alternatives.length > 0 && (
                     <div className="mt-4 pt-4 border-t border-slate-600">
-                      <p className="text-gray-400 mb-2 text-sm font-bold">ALTERNATIVAS:</p>
+                      <p className="text-gray-400 mb-2 text-sm font-bold">ALTERNATIVAS (por compatibilidad):</p>
                       <div className="space-y-2">
-                        {result.alternatives.map((alt, i) => (
-                          <div key={i} className="text-xs bg-slate-700 p-2 rounded">
-                            <span className="text-amber-400 font-bold">{alt.strategy}</span>
-                            <p className="text-gray-300 mt-1">{alt.reason}</p>
-                          </div>
-                        ))}
+                        {result.alternatives.map((alt, i) => {
+                          const compatibility = alt.trendCompatibility || 0
+                          const getCompatibilityColor = () => {
+                            if (compatibility >= 90) return 'text-green-400'
+                            if (compatibility >= 70) return 'text-lime-400'
+                            if (compatibility >= 50) return 'text-yellow-400'
+                            return 'text-red-400'
+                          }
+
+                          return (
+                            <div key={i} className="text-xs bg-slate-700 p-2 rounded border-l-4 border-slate-500">
+                              <div className="flex justify-between items-start">
+                                <span className="text-amber-400 font-bold">{alt.strategy}</span>
+                                <span className={`font-bold ${getCompatibilityColor()}`}>{compatibility}%</span>
+                              </div>
+                              <p className="text-gray-300 mt-1">{alt.reason}</p>
+                            </div>
+                          )
+                        })}
                       </div>
                     </div>
                   )}
