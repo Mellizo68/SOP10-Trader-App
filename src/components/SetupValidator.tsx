@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { SetupValidation, ValidationResult } from '../types'
 import { SetupValidatorService } from '../services/setupValidator'
-import { CheckCircle2, AlertCircle, TrendingUp, TrendingDown } from 'lucide-react'
+import { CheckCircle2, AlertCircle } from 'lucide-react'
 
 const SetupValidator: React.FC = () => {
   const [formData, setFormData] = useState<SetupValidation>({
@@ -53,14 +53,17 @@ const SetupValidator: React.FC = () => {
     setResult(validation)
   }
 
-  const handleInputChange = (section: string, field: string, value: any) => {
-    setFormData(prev => ({
-      ...prev,
-      [section]: {
-        ...prev[section as keyof SetupValidation],
-        [field]: value
+  const handleInputChange = (section: keyof SetupValidation, field: string, value: any) => {
+    setFormData(prev => {
+      const currentSection = prev[section] as any
+      return {
+        ...prev,
+        [section]: {
+          ...currentSection,
+          [field]: value
+        }
       }
-    }))
+    })
   }
 
   const ConfluenceScoreBadge = ({ score }: { score: number }) => {

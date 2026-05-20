@@ -111,7 +111,6 @@ export class SetupValidatorService {
     }
 
     const isBullish = setup.priceAction.currentPrice > setup.priceAction.ema21
-    const cvdBullish = setup.volatilityCVD.cvdDivergence === 'bullish'
 
     if (setup.options.strategy.includes('CALL')) {
       return isBullish ? 'SELL_CALL' : 'BUY_PUT'

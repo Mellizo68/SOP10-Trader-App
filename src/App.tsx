@@ -1,4 +1,3 @@
-import React, { useState } from 'react'
 import SetupValidator from './components/SetupValidator'
 import './styles/App.css'
 
