@@ -243,7 +243,9 @@ const ImageExtractor: React.FC<ImageExtractorProps> = ({ onExtractComplete }) =>
                       extractedData.extractedNumbers.map((item, idx) => (
                         <div key={idx} className="flex justify-between p-2 bg-slate-700 rounded">
                           <span className="text-gray-400">{item.label}</span>
-                          <span className="font-bold text-cyan-300">{item.value.toFixed(2)}</span>
+                          <span className="font-bold text-cyan-300">
+                            {typeof item.value === 'number' ? item.value.toFixed(2) : item.value}
+                          </span>
                         </div>
                       ))
                     ) : (
@@ -251,6 +253,33 @@ const ImageExtractor: React.FC<ImageExtractorProps> = ({ onExtractComplete }) =>
                     )}
                   </div>
                 </div>
+
+                {/* NET GAMMA & DELTA Summary (TanukiTrade) */}
+                {(extractedData.netGamma || extractedData.netDelta || extractedData.gammaStatus) && (
+                  <div className="bg-slate-800 p-4 rounded-lg border border-green-600 border-opacity-50">
+                    <p className="text-green-400 font-bold text-sm mb-2">⚡ NET EXPOSURE</p>
+                    <div className="space-y-1 text-xs">
+                      {extractedData.netGamma && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-400">NET GAMMA:</span>
+                          <span className="text-green-300 font-bold">{extractedData.netGamma}</span>
+                        </div>
+                      )}
+                      {extractedData.netDelta && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-400">NET DELTA:</span>
+                          <span className="text-green-300 font-bold">{extractedData.netDelta}</span>
+                        </div>
+                      )}
+                      {extractedData.gammaStatus && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-400">GAMMA:</span>
+                          <span className="text-green-300 font-bold">{extractedData.gammaStatus}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 {/* GEX Data Summary */}
                 {extractedData.gex && Object.keys(extractedData.gex).length > 0 && (
@@ -268,6 +297,33 @@ const ImageExtractor: React.FC<ImageExtractorProps> = ({ onExtractComplete }) =>
                           <span className="text-gray-400">P1:</span>
                           <span className="ml-2 text-cyan-300">${extractedData.gex.putWall1.toFixed(2)}</span>
                         </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Expiry Chain Data (TanukiTrade Options Matrix) */}
+                {extractedData.expiryChainData && extractedData.expiryChainData.length > 0 && (
+                  <div className="bg-slate-800 p-4 rounded-lg border border-purple-600 border-opacity-50 max-h-48 overflow-y-auto">
+                    <p className="text-purple-400 font-bold text-sm mb-2">📋 EXPIRY CHAIN ({extractedData.expiryChainData.length})</p>
+                    <div className="space-y-2 text-xs">
+                      {extractedData.expiryChainData.slice(0, 5).map((item, idx) => (
+                        <div key={idx} className="bg-slate-700 p-2 rounded">
+                          <p className="text-purple-300 font-bold">{item.expiry}</p>
+                          <div className="grid grid-cols-2 gap-1 text-gray-400 mt-1">
+                            {Object.entries(item.data)
+                              .slice(0, 6)
+                              .map(([key, value]) => (
+                                <div key={key} className="flex justify-between">
+                                  <span>{key.toUpperCase()}:</span>
+                                  <span className="text-cyan-300">{String(value).substring(0, 15)}</span>
+                                </div>
+                              ))}
+                          </div>
+                        </div>
+                      ))}
+                      {extractedData.expiryChainData.length > 5 && (
+                        <p className="text-gray-500 text-center">+{extractedData.expiryChainData.length - 5} más...</p>
                       )}
                     </div>
                   </div>
