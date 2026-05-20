@@ -27,19 +27,34 @@ Sistema profesional de validación de setups de opciones + Bitácora de trades c
 - Position sizing automático
 - Soporta 13 estrategias diferentes
 
-✅ **Bitácora de Trades Completa**
-- Tracking de todas tus operaciones
-- P/L automático
-- Estadísticas por estrategia
-- Análisis de winrate
+✅ **Bitácora de Trades Completa (NEW - Fase 4)**
+- Auto-completa desde SetupValidator + ExitCalculator
+- Registra entrada, salida y P/L automáticamente
+- Tabla filtrable por Status, Estrategia, Confluencia, Symbol
+- Modal para ver/editar/cerrar trades
+- Cálculo automático de P/L % y posición relativa a TP/SL
+- Persistencia en localStorage (sin backend)
 
 ✅ **Integración MCP Server**
 - Conecta con Bebeto Server
 - Análisis técnico automático
 - Recomendaciones basadas en patrones
 
+✅ **Estadísticas Overview (Tab 1 - Básico)**
+- 6 Stats Cards: Total Trades, Win Rate, Profit Factor, Total P/L, Avg Win/Loss
+- Quick Metrics: Mejor estrategia, Mejor trade, Racha actual
+- Últimos 5 trades cerrados
+- Visualización de open vs closed trades
+
+✅ **Estadísticas Avanzadas (Tab 2 - Analytics)**
+- **Equity Curve**: Línea acumulada P/L over time
+- **P&L Distribution**: Histogram de rangos de P/L (Major Loss/Win, etc)
+- **Strategy Breakdown**: Pie chart + tabla de trades por estrategia
+- **Por Confluencia**: Desglose High/Medium/Low con win rate y avg P/L
+- **Insights Automáticos**: Recomendaciones basadas en análisis
+
 ✅ **Exportación de Datos**
-- Export a CSV/JSON
+- Export a CSV con todos los trades
 - Integración Notion (próximamente)
 - Screenshots organizados
 
@@ -142,6 +157,39 @@ vercel env add VITE_ANTHROPIC_API_KEY
 - Click "Cargar en Validador"
 - Auto-llena SetupValidator
 
+### Trade Journal (Bitácora de Trades)
+
+#### Flujo Recomendado:
+```
+1. Ejecutar validation en SetupValidator
+   ↓
+2. Click: "📓 Crear Trade Entry"
+   ↓
+3. Trade Journal abre con datos pre-completos:
+   - confluenceScore, targetEntry, targetTP, targetSL
+   - symbol, strategy, delta, ivPercent, daysToExpiration
+   ↓
+4. Completar entryPrice y confirmar
+   ↓
+5. Cuando se cierra el trade:
+   - Ir a "📈 Trades" tab
+   - Click en "eye" icon
+   - Ingresar exitPrice y exitDate
+   - Modal auto-calcula P/L y %
+   ↓
+6. Ver análisis en "🔍 Analytics"
+   - Equity Curve, P&L Distribution
+   - Performance por Estrategia/Confluencia
+```
+
+#### Características:
+- **Auto-completa**: Desde SetupValidator (confluenceScore, targets)
+- **Filtrable**: Por Status, Strategy, Confluence, Symbol
+- **Sortable**: Haz click en headers para ordenar
+- **Export**: Descarga CSV con todos los trades
+- **Analytics**: 2 tabs - Overview (básico) + Advanced (profundo)
+- **Persistencia**: Todos los datos en localStorage (local)
+
 ### Setup Validator
 
 1. **Ingresa datos de GEX** (TanukiTrade App)
@@ -205,15 +253,54 @@ El Setup Validator se integra con tu MCP Server Bebeto para:
 - [x] **Fase 1**: Setup Validator Core ✅ COMPLETADO
 - [x] **Fase 2**: Exit Calculator ✅ COMPLETADO
 - [x] **Fase 3**: Image Extractor (Claude Vision) ✅ COMPLETADO
-- [ ] **Fase 4**: Bitácora de Trades + Estadísticas
-- [ ] **Fase 5**: API Backend (PostgreSQL)
+- [x] **Fase 4**: Bitácora de Trades + Estadísticas ✅ COMPLETADO
+- [x] **Fase 5**: API Backend + PostgreSQL ✅ COMPLETADO
 - [ ] **Fase 6**: Dashboard con gráficos avanzados
 - [ ] **Fase 7**: Integración Notion API
 - [ ] **Fase 8**: MCP Server Bebeto Integration
 - [ ] **Fase 9**: Mobile app (React Native)
 
+### 🆕 Fase 5: API Backend + PostgreSQL - COMPLETADO ✅
+
+**Lo que se implementó:**
+- ✅ Express.js REST API (TypeScript)
+- ✅ PostgreSQL database con schema completo
+- ✅ 6 endpoints de trades (CRUD + close)
+- ✅ 3 endpoints de estadísticas (overview + by-strategy + by-confluence)
+- ✅ Arquitectura offline-first con sync automático
+- ✅ Sincronización de background (non-blocking)
+- ✅ Docker Compose para desarrollo local
+- ✅ Railway deployment configuration
+- ✅ Build successful: Frontend + Backend compilados
+
+**Cómo funciona:**
+```
+App (React)
+    ↓
+TradeJournalService (localStorage)
+    ↓ (background sync)
+API Client (Express)
+    ↓
+PostgreSQL (cloud persistence)
+```
+
+**Características:**
+- Sincronización bidireccional: UI → localStorage → API → DB
+- Offline-first: Si no hay conexión, funciona desde cache local
+- Auto-sync: Cuando vuelves online, sincroniza automáticamente
+- Validación: Todos los inputs validados antes de guardar
+- Errores: Manejo elegante con fallback a localStorage
+
+**Próximos pasos:**
+1. Local testing con Docker: `docker compose up`
+2. Deployment a Railway
+3. Testing en producción
+
+Ver detalles en: `PHASE5_IMPLEMENTATION.md` y `PHASE5_TESTING_DEPLOYMENT.md`
+
 ## 🛠️ Desarrollo Local
 
+### Frontend Only (Fases 1-4)
 ```bash
 # Instalar deps
 npm install
@@ -228,26 +315,61 @@ npm run build
 npm run preview
 ```
 
+### Full Stack with Backend (Fase 5+)
+```bash
+# Terminal 1: PostgreSQL
+docker compose up -d
+
+# Terminal 2: Backend
+cd backend
+npm install
+npm run dev
+# Server en: http://localhost:5000
+
+# Terminal 3: Frontend
+npm install
+npm run dev
+# App en: http://localhost:3000
+```
+
+### Backend Only
+```bash
+cd backend
+npm install
+npm run build      # Compile TypeScript
+npm start          # Production mode
+npm run dev        # Development mode
+```
+
 ## 📝 Estructura de Archivos
 
 ```
 SOP10-Trader-App/
 ├── src/
 │   ├── components/
-│   │   ├── ImageExtractor.tsx          (NEW: Auto-extracción de imágenes)
-│   │   ├── SetupValidator.tsx          (Validación de setups)
-│   │   ├── ExitCalculator.tsx          (Cálculo TP/SL)
-│   │   └── SetupValidator.tsx
+│   │   ├── ImageExtractor.tsx                (Auto-extracción de imágenes)
+│   │   ├── SetupValidator.tsx                (Validación de setups)
+│   │   ├── ExitCalculator.tsx                (Cálculo TP/SL)
+│   │   ├── TradeJournal.tsx                  (NEW: Bitácora de trades)
+│   │   └── TradeJournal/
+│   │       ├── OverviewTab.tsx               (Stats cards y quick metrics)
+│   │       ├── TradeInputForm.tsx            (Crear nuevo trade)
+│   │       ├── TradeHistoryTable.tsx         (Tabla de trades con filtros)
+│   │       ├── TradeDetailModal.tsx          (Ver/editar/cerrar trades)
+│   │       └── AnalyticsTab.tsx              (Análisis avanzado + charts)
 │   ├── services/
-│   │   ├── imageExtractor.ts           (NEW: Claude Vision integration)
-│   │   └── setupValidator.ts           (Lógica de validación)
+│   │   ├── imageExtractor.ts                 (Claude Vision integration)
+│   │   ├── setupValidator.ts                 (Lógica de validación)
+│   │   └── tradeJournalService.ts            (NEW: CRUD + estadísticas de trades)
+│   ├── utils/
+│   │   └── localStorage.ts                   (NEW: Persistencia de datos)
 │   ├── types/
-│   │   └── index.ts                    (TypeScript interfaces)
+│   │   └── index.ts                          (TypeScript interfaces)
 │   ├── styles/
 │   │   └── App.css
-│   ├── App.tsx                         (App principal)
+│   ├── App.tsx                               (App principal)
 │   └── main.tsx
-├── .env.example                        (NEW: Ejemplo de variables)
+├── .env.example                              (Ejemplo de variables)
 ├── index.html
 ├── package.json
 ├── tsconfig.json

@@ -5,9 +5,11 @@ import { CheckCircle2, AlertCircle } from 'lucide-react'
 
 interface SetupValidatorProps {
   initialData?: SetupValidation
+  onValidationResult?: (result: ValidationResult) => void
+  onCreateTradeEntry?: () => void
 }
 
-const SetupValidator: React.FC<SetupValidatorProps> = ({ initialData }) => {
+const SetupValidator: React.FC<SetupValidatorProps> = ({ initialData, onValidationResult, onCreateTradeEntry }) => {
   const [formData, setFormData] = useState<SetupValidation>({
     gexData: {
       callWall1: 0,
@@ -75,6 +77,9 @@ const SetupValidator: React.FC<SetupValidatorProps> = ({ initialData }) => {
   const handleAnalyze = () => {
     const validation = SetupValidatorService.validateSetup(formData)
     setResult(validation)
+    if (onValidationResult) {
+      onValidationResult(validation)
+    }
   }
 
   const handleInputChange = (section: keyof SetupValidation, field: string, value: any) => {
@@ -489,6 +494,14 @@ const SetupValidator: React.FC<SetupValidatorProps> = ({ initialData }) => {
                     </ul>
                   </div>
                 )}
+
+                {/* Create Trade Entry Button */}
+                <button
+                  onClick={onCreateTradeEntry}
+                  className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-bold py-3 px-6 rounded-lg transition-all"
+                >
+                  📓 Crear Trade Entry
+                </button>
               </>
             )}
           </div>

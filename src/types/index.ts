@@ -165,3 +165,13 @@ export interface Statistics {
     low: { winRate: number; avgProfit: number }
   }
 }
+
+export interface TradeFilter {
+  status?: 'open' | 'closed' | 'cancelled'
+  strategy?: string
+  confluenceMin?: number
+  confluenceMax?: number
+  zScoreMin?: number
+  zScoreMax?: number
+  searchSymbol?: string
+}
