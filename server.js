@@ -1,4 +1,3 @@
-cat > /Users/bebeto/SOP10-Trader-App/server.js << 'EOF'
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
@@ -8,40 +7,37 @@ const DIST_DIR = path.join(__dirname, 'dist');
 
 const server = http.createServer((req, res) => {
   let filePath = path.join(DIST_DIR, req.url);
-  
-  // Default to index.html for root and SPA routes
-  if (req.url === '/' || !path.extname(filePath)) {
+  const ext = path.extname(filePath).toLowerCase();
+
+  if (req.url === '/' || ext === '') {
     filePath = path.join(DIST_DIR, 'index.html');
   }
 
   fs.readFile(filePath, (err, content) => {
     if (err) {
-      // Return index.html for 404 (SPA routing)
       fs.readFile(path.join(DIST_DIR, 'index.html'), (indexErr, indexContent) => {
         res.writeHead(200, { 'Content-Type': 'text/html' });
         res.end(indexContent);
       });
-    } else {
-      const ext = path.extname(filePath);
-      const contentType = {
-        '.html': 'text/html',
-        '.js': 'application/javascript',
-        '.css': 'text/css',
-        '.json': 'application/json',
-        '.png': 'image/png',
-        '.jpg': 'image/jpeg',
-        '.svg': 'image/svg+xml',
-        '.ico': 'image/x-icon'
-      }[ext] || 'application/octet-stream';
-      
-      res.writeHead(200, { 'Content-Type': contentType });
-      res.end(content);
+      return;
     }
+
+    let contentType = 'application/octet-stream';
+    if (ext === '.html') contentType = 'text/html';
+    else if (ext === '.js') contentType = 'application/javascript';
+    else if (ext === '.css') contentType = 'text/css';
+    else if (ext === '.json') contentType = 'application/json';
+    else if (ext === '.png') contentType = 'image/png';
+    else if (ext === '.jpg' || ext === '.jpeg') contentType = 'image/jpeg';
+    else if (ext === '.svg') contentType = 'image/svg+xml';
+    else if (ext === '.ico') contentType = 'image/x-icon';
+
+    res.writeHead(200, { 'Content-Type': contentType });
+    res.end(content);
   });
 });
 
 server.listen(PORT, () => {
-  console.log(`✅ Server running on port ${PORT}`);
-  console.log(`📍 Serving files from: ${DIST_DIR}`);
+  console.log('✅ Server running on port ' + PORT);
+  console.log('📍 Serving files from: ' + DIST_DIR);
 });
-EOF
