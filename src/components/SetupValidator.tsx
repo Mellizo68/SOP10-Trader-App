@@ -240,7 +240,7 @@ const SetupValidator: React.FC = () => {
                   <SelectField
                     label="Strategy"
                     value={formData.options.strategy}
-                    options={['PUT_CREDIT_SPREAD', 'CALL_CREDIT_SPREAD', 'IRON_CONDOR', 'IRON_BUTTERFLY']}
+                    options={['PUT_CREDIT_SPREAD', 'CALL_CREDIT_SPREAD', 'PUT_DEBIT_SPREAD', 'CALL_DEBIT_SPREAD', 'IRON_CONDOR', 'IRON_BUTTERFLY']}
                     onChange={(val) => handleInputChange('options', 'strategy', val)}
                   />
                   <InputField

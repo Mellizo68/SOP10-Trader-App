@@ -64,7 +64,7 @@ export interface ValidationResult {
     dteCheck: boolean
     deltaCheck: boolean
   }
-  recommendation: 'SELL_PUT_CREDIT_SPREAD' | 'SELL_CALL_CREDIT_SPREAD' | 'IRON_CONDOR' | 'IRON_BUTTERFLY' | 'WAIT'
+  recommendation: 'PUT_CREDIT_SPREAD' | 'CALL_CREDIT_SPREAD' | 'PUT_DEBIT_SPREAD' | 'CALL_DEBIT_SPREAD' | 'IRON_CONDOR' | 'IRON_BUTTERFLY' | 'WAIT'
   targetEntry: number
   targetTP: number // 50% de prima en crédito, 200% en débito
   targetSL: number // -200%

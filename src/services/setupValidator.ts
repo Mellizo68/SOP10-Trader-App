@@ -115,13 +115,17 @@ export class SetupValidatorService {
 
     // Credit spreads (preferidos para vender)
     if (strategy === 'PUT_CREDIT_SPREAD') {
-      return isBullish ? 'SELL_PUT_CREDIT_SPREAD' : 'WAIT'
+      return isBullish ? 'PUT_CREDIT_SPREAD' : 'WAIT'
     } else if (strategy === 'CALL_CREDIT_SPREAD') {
-      return !isBullish ? 'SELL_CALL_CREDIT_SPREAD' : 'WAIT'
+      return !isBullish ? 'CALL_CREDIT_SPREAD' : 'WAIT'
     } else if (strategy === 'IRON_CONDOR') {
       return 'IRON_CONDOR'
     } else if (strategy === 'IRON_BUTTERFLY') {
       return 'IRON_BUTTERFLY'
+    } else if (strategy === 'PUT_DEBIT_SPREAD') {
+      return !isBullish ? 'PUT_DEBIT_SPREAD' : 'WAIT'
+    } else if (strategy === 'CALL_DEBIT_SPREAD') {
+      return isBullish ? 'CALL_DEBIT_SPREAD' : 'WAIT'
     }
 
     return 'WAIT'
