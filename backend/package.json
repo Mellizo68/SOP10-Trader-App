@@ -4,7 +4,7 @@
   "main": "dist/server.js",
   "scripts": {
     "dev": "ts-node src/server.ts",
-    "build": "tsc && cp -r src/db dist/db",
+    "build": "tsc && mkdir -p dist/db && cp -r src/db/* dist/db/",
     "start": "node dist/server.js",
     "migrate": "node dist/db/migrations.js"
   },
