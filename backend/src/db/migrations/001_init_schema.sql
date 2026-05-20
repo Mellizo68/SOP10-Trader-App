@@ -37,7 +37,7 @@ CREATE INDEX IF NOT EXISTS idx_date_entry ON trades(date_entry DESC);
 CREATE TABLE IF NOT EXISTS screenshots (
   id SERIAL PRIMARY KEY,
   trade_id VARCHAR(20) NOT NULL REFERENCES trades(id) ON DELETE CASCADE,
-  screenshot_data LONGTEXT,
+  screenshot_data TEXT,
   created_at TIMESTAMP DEFAULT NOW()
 );
 
