@@ -232,7 +232,7 @@ const SetupValidator: React.FC = () => {
               <div className="bg-slate-800 p-6 rounded-lg space-y-4">
                 <h2 className="text-xl font-bold text-purple-400">⚙️ OPTIONS</h2>
                 <div className="grid grid-cols-2 gap-4">
-                  <InputField
+                  <TextInputField
                     label="Symbol"
                     value={formData.options.symbol}
                     onChange={(val) => handleInputChange('options', 'symbol', val)}
@@ -372,6 +372,24 @@ const InputField: React.FC<{
       type="number"
       value={value}
       onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
+      placeholder={placeholder}
+      className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-white placeholder-gray-500"
+    />
+  </div>
+)
+
+const TextInputField: React.FC<{
+  label: string
+  value: string
+  onChange: (value: string) => void
+  placeholder?: string
+}> = ({ label, value, onChange, placeholder }) => (
+  <div>
+    <label className="block text-sm text-gray-400 mb-1">{label}</label>
+    <input
+      type="text"
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
       className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-white placeholder-gray-500"
     />
