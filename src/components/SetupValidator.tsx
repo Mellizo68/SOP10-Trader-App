@@ -312,6 +312,28 @@ const SetupValidator: React.FC<SetupValidatorProps> = ({ initialData }) => {
                     onChange={(val) => handleInputChange('volatilityCVD', 'institutionalVolume', val)}
                   />
                 </div>
+
+                {/* Z-Score & Institutional Activity Section */}
+                <div className="pt-4 border-t border-slate-600">
+                  <h3 className="text-lg font-bold text-orange-400 mb-4">⚡ INSTITUTIONAL ACTIVITY (Z-Score)</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <InputField
+                      label="Z-Score (CVD)"
+                      value={formData.volatilityCVD.zScore || 0}
+                      onChange={(val) => handleInputChange('volatilityCVD', 'zScore', val)}
+                      placeholder="ej: 2.34 (>2 = fuerte compra, <-2 = fuerte venta)"
+                    />
+                    <InputField
+                      label="Z-Vol (Volume)"
+                      value={formData.volatilityCVD.zVol || 0}
+                      onChange={(val) => handleInputChange('volatilityCVD', 'zVol', val)}
+                      placeholder="ej: 1.89"
+                    />
+                  </div>
+                  <p className="text-xs text-gray-400 mt-3">
+                    💡 Z-Score {'>'} +2.0 = Actividad fuerte COMPRA (+15 pts) | Z-Score {'<'} -2.0 = Actividad fuerte VENTA (-10 pts)
+                  </p>
+                </div>
               </div>
             )}
 

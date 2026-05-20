@@ -215,6 +215,79 @@ VOLUMEN INSTITUCIONAL | TRUE | VOLATILITY
 
 ---
 
+## 3B️⃣ Screenshots de ThinkorSwim - CVD CON Z-SCORE ⭐ (RECOMENDADO)
+
+**¿Qué es?** Panel CVD de ThinkorSwim con Z-Score de volumen - detecta actividad institucional extrema
+
+**Qué Incluir:**
+- **CVD VALUE** - Valor del CVD acumulado (ej: 8945)
+- **CVD EMA** - Línea de media móvil (ej: 7234)
+- **Z-SCORE** - Desviación estándar del CVD (-3 a +3) (ej: 2.34)
+- **Z-VOL o Z-VOLUME** - Desviación estándar del volumen (ej: 1.89)
+- **VOLUMEN INSTITUCIONAL** - Velas coloreadas especialmente en el gráfico
+
+**Cómo Capturar:**
+
+```
+1. En ThinkorSwim, abre tu símbolo
+2. Ve al panel CVD en el gráfico (usualmente panel inferior)
+3. Asegúrate de que Z-SCORE esté visible
+4. Captura el área con:
+   - CVD Value claro
+   - CVD EMA visible
+   - Z-SCORE número visible
+   - Z-VOLUME si está disponible
+   - Barras/velas de volumen visibles
+```
+
+**Ejemplo de Salida Detectada:**
+```
+CVD VALUE | 8945 | VOLATILITY
+CVD EMA | 7234 | VOLATILITY
+Z-SCORE | 2.34 | VOLATILITY
+Z-VOL | 1.89 | VOLATILITY
+IV PERCENT | 67.5 | VOLATILITY
+VOLUMEN INSTITUCIONAL | TRUE | VOLATILITY
+```
+
+**Z-SCORE Interpretación en SOP10:**
+- **Z-SCORE > +2.0**: 🟢 Actividad institucional FUERTE COMPRA (+15 pts confluencia)
+  - Confianza muy alta para señales bullish
+  - Setup muy atractivo si coincide con precio en confluencia
+  
+- **Z-SCORE +1.0 a +2.0**: 🟡 Compra moderada (normal)
+  - Señal neutral a positiva
+  - Valida divergencia bullish
+  
+- **Z-SCORE -1.0 a +1.0**: ⚪ Actividad normal
+  - Volumen típico
+  - No hay confirmación extrema
+  
+- **Z-SCORE -2.0 a -1.0**: 🟡 Venta moderada (normal)
+  - Señal neutral a negativa
+  - Valida divergencia bearish
+  
+- **Z-SCORE < -2.0**: 🔴 Actividad institucional FUERTE VENTA (-10 pts confluencia)
+  - ESPERA MEJOR CONFLUENCIA
+  - Presión institucional fuerte contraria
+  - Riesgo muy alto
+
+**Confianza Esperada: 85-98%** ⭐⭐⭐
+
+---
+
+### ¿Cuál Screenshot Usar para CVD?
+
+| Necesitas... | Usa | Por Qué |
+|------------|------|--------|
+| **CVD básico** | TradingView (3️⃣) | Simple, pero sin actividad institucional |
+| **Actividad Institucional** | ThinkorSwim Z-Score (3B️⃣) | Detecta extremos institucionales |
+| **Máxima Precisión** | ThinkorSwim Z-Score (3B️⃣) | Números más legibles, estadística pura |
+
+**Recomendación:** 👉 Usa **3B️⃣ (ThinkorSwim Z-Score)** para máxima precisión y detección de actividad institucional
+
+---
+
 ## 🎯 Tips para Máxima Precisión
 
 ### ✅ HACER:

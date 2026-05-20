@@ -157,6 +157,21 @@ Columnas que contiene:
 Para CADA valor encontrado en la tabla, incluye la EXPIRY DATE:
 EXPIRY|05/22|IVX|87.3|SKEW|237.26|NETGEX|119.3M|C1|235|P1|207.5
 
+=== PARA IMÁGENES DE THINKORSWIM - CVD CON Z-SCORE ===
+Busca estos valores en el panel CVD (Cumulative Volume Delta):
+- CVD VALUE (número del CVD acumulado)
+- CVD EMA (línea de media móvil del CVD)
+- Z-SCORE o Z SCORE (desviación estándar del CVD, típicamente -3 a +3)
+- Z-VOL o Z VOLUME (desviación estándar del volumen)
+- VOLUMEN INSTITUCIONAL (velas coloreadas especialmente, típicamente cyan/magenta)
+
+Z-SCORE Interpretación:
+- > +2.0: Actividad institucional fuerte (STRONG_BUY)
+- +1.0 a +2.0: Compra moderada (NORMAL)
+- -1.0 a +1.0: Actividad normal (NORMAL)
+- -2.0 a -1.0: Venta moderada (NORMAL)
+- < -2.0: Presión institucional fuerte (STRONG_SELL)
+
 === REGLAS DE EXTRACCIÓN ===
 1. Para CADA valor numérico, responde en este formato EXACTO (uno por línea):
    LABEL|VALOR|TIPO
@@ -167,7 +182,7 @@ EXPIRY|05/22|IVX|87.3|SKEW|237.26|NETGEX|119.3M|C1|235|P1|207.5
 3. TIPOS válidos:
    - GEX (para Call Wall, Put Wall, Net GEX, Gamma, HVL)
    - PRICE (para precios y medias móviles)
-   - VOLATILITY (para IV, CVD, SKEW)
+   - VOLATILITY (para IV, CVD, SKEW, Z-SCORE, Z-VOL)
    - EXPIRY (para datos de tabla con fecha)
 
 4. Si ves números MUY GRANDES con M, B, K (millones, billions, miles), PRESERVA ESOS VALORES:
@@ -192,6 +207,10 @@ P1|207.5|GEX
 EXPIRY|05/22|IVX|87.3|NETGEX|119.3M|C1|235|P1|207.5|EXPIRY
 EXPIRY|05/26|IVX|61.0|NETGEX|129.6M|C1|235|P1|212.5|EXPIRY
 IV PERCENT|67.5|VOLATILITY
+CVD VALUE|8945|VOLATILITY
+CVD EMA|7234|VOLATILITY
+Z-SCORE|2.34|VOLATILITY
+Z-VOL|1.89|VOLATILITY
 CONFIANZA|88`
   }
 
@@ -377,6 +396,12 @@ CONFIANZA|88`
           } else if (lowerLabel.includes('cvd delta')) {
             volatilityCVD.cvdDelta = numValue
             volatilityCount++
+          } else if (lowerLabel.includes('z-score') || lowerLabel.includes('z score')) {
+            volatilityCVD.zScore = numValue
+            volatilityCount++
+          } else if (lowerLabel.includes('z-vol') || lowerLabel.includes('z vol') || lowerLabel.includes('z volume')) {
+            volatilityCVD.zVol = numValue
+            volatilityCount++
           }
         }
       }
@@ -390,6 +415,21 @@ CONFIANZA|88`
       detectedType = 'price_action'
     } else if (gexCount > 0 && (priceCount > 0 || volatilityCount > 0)) {
       detectedType = 'mixed'
+    }
+
+    // Calcular estatus de actividad institucional basado en Z-Score
+    if (volatilityCVD.zScore !== undefined) {
+      if (volatilityCVD.zScore > 2.0) {
+        volatilityCVD.institutionalActivityStatus = 'strong_buy'
+      } else if (volatilityCVD.zScore > 1.0) {
+        volatilityCVD.institutionalActivityStatus = 'normal'
+      } else if (volatilityCVD.zScore < -2.0) {
+        volatilityCVD.institutionalActivityStatus = 'strong_sell'
+      } else if (volatilityCVD.zScore < -1.0) {
+        volatilityCVD.institutionalActivityStatus = 'normal'
+      } else {
+        volatilityCVD.institutionalActivityStatus = 'normal'
+      }
     }
 
     return {

@@ -55,6 +55,11 @@ export interface VolatilityCVDData {
 
   // Volumen
   institutionalVolume: boolean
+
+  // Z-Score (Actividad Institucional)
+  zScore?: number         // Desviación estándar del CVD respecto al promedio
+  zVol?: number          // Z-Score del volumen
+  institutionalActivityStatus?: 'strong_buy' | 'strong_sell' | 'normal' | 'weak'  // Interpretación del Z-Score
 }
 
 export interface OptionsData {

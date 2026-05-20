@@ -329,6 +329,72 @@ const ImageExtractor: React.FC<ImageExtractorProps> = ({ onExtractComplete }) =>
                   </div>
                 )}
 
+                {/* CVD & Volatility Metrics (ToS Z-Score) */}
+                {(extractedData.volatilityCVD?.cvdValue !== undefined || extractedData.volatilityCVD?.zScore !== undefined) && (
+                  <div className="bg-slate-800 p-4 rounded-lg border border-orange-600 border-opacity-50">
+                    <p className="text-orange-400 font-bold text-sm mb-3">📊 CVD & VOLATILITY METRICS</p>
+                    <div className="space-y-2 text-xs">
+                      {extractedData.volatilityCVD?.cvdValue !== undefined && (
+                        <div className="flex justify-between p-2 bg-slate-700 rounded">
+                          <span className="text-gray-400">CVD VALUE:</span>
+                          <span className="text-orange-300 font-bold">{extractedData.volatilityCVD.cvdValue.toFixed(0)}</span>
+                        </div>
+                      )}
+                      {extractedData.volatilityCVD?.cvdEMA !== undefined && (
+                        <div className="flex justify-between p-2 bg-slate-700 rounded">
+                          <span className="text-gray-400">CVD EMA:</span>
+                          <span className="text-orange-300 font-bold">{extractedData.volatilityCVD.cvdEMA.toFixed(0)}</span>
+                        </div>
+                      )}
+                      {extractedData.volatilityCVD?.ivPercent !== undefined && (
+                        <div className="flex justify-between p-2 bg-slate-700 rounded">
+                          <span className="text-gray-400">IV %:</span>
+                          <span className="text-orange-300 font-bold">{extractedData.volatilityCVD.ivPercent.toFixed(2)}%</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Z-Score & Institutional Activity */}
+                    {(extractedData.volatilityCVD?.zScore !== undefined || extractedData.volatilityCVD?.zVol !== undefined) && (
+                      <div className="mt-3 pt-3 border-t border-slate-600">
+                        <p className="text-yellow-400 font-bold text-xs mb-2">⚡ INSTITUTIONAL ACTIVITY</p>
+                        <div className="space-y-2 text-xs">
+                          {extractedData.volatilityCVD?.zScore !== undefined && (
+                            <div className="flex justify-between p-2 bg-slate-700 rounded">
+                              <span className="text-gray-400">Z-SCORE:</span>
+                              <span className={`font-bold ${
+                                extractedData.volatilityCVD.zScore > 2 ? 'text-green-400' :
+                                extractedData.volatilityCVD.zScore < -2 ? 'text-red-400' :
+                                'text-yellow-400'
+                              }`}>
+                                {extractedData.volatilityCVD.zScore.toFixed(2)}
+                              </span>
+                            </div>
+                          )}
+                          {extractedData.volatilityCVD?.zVol !== undefined && (
+                            <div className="flex justify-between p-2 bg-slate-700 rounded">
+                              <span className="text-gray-400">Z-VOL:</span>
+                              <span className="text-yellow-300 font-bold">{extractedData.volatilityCVD.zVol.toFixed(2)}</span>
+                            </div>
+                          )}
+                          {extractedData.volatilityCVD?.institutionalActivityStatus && (
+                            <div className="flex justify-between p-2 bg-slate-700 rounded">
+                              <span className="text-gray-400">STATUS:</span>
+                              <span className={`font-bold ${
+                                extractedData.volatilityCVD.institutionalActivityStatus === 'strong_buy' ? 'text-green-400' :
+                                extractedData.volatilityCVD.institutionalActivityStatus === 'strong_sell' ? 'text-red-400' :
+                                'text-gray-300'
+                              }`}>
+                                {extractedData.volatilityCVD.institutionalActivityStatus.replace('_', ' ').toUpperCase()}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {/* Action Buttons */}
                 {!verified ? (
                   <button

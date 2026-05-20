@@ -103,6 +103,17 @@ export class SetupValidatorService {
       score = Math.max(0, score - 5)
     }
 
+    // Z-Score Impact (Institutional Activity)
+    if (setup.volatilityCVD.zScore !== undefined) {
+      if (setup.volatilityCVD.zScore > 2.0) {
+        // Strong institutional buying
+        score = Math.min(100, score + 15)
+      } else if (setup.volatilityCVD.zScore < -2.0) {
+        // Strong institutional selling
+        score = Math.max(0, score - 10)
+      }
+    }
+
     return Math.round(score)
   }
 
@@ -230,6 +241,13 @@ export class SetupValidatorService {
       warnings.push(`⚠️ Delta ${setup.options.delta} fuera del rango ideal`)
     }
 
+    // Z-Score Warnings
+    if (setup.volatilityCVD.zScore !== undefined) {
+      if (setup.volatilityCVD.zScore < -2.0) {
+        warnings.push(`⚠️ Z-Score muy negativo (${setup.volatilityCVD.zScore.toFixed(2)}): Presión institucional fuerte, espera mejor confluencia`)
+      }
+    }
+
     return warnings
   }
 
@@ -253,6 +271,15 @@ export class SetupValidatorService {
 
     if (setup.volatilityCVD.institutionalVolume) {
       notes.push('⭐ Volumen institucional detectado (> 1.5X promedio)')
+    }
+
+    // Z-Score Notes (Institutional Activity)
+    if (setup.volatilityCVD.zScore !== undefined) {
+      if (setup.volatilityCVD.zScore > 2.0) {
+        notes.push(`⭐ Z-Score ${setup.volatilityCVD.zScore.toFixed(2)}: Actividad institucional fuerte (COMPRA)`)
+      } else if (setup.volatilityCVD.zScore < -2.0) {
+        notes.push(`⚠️ Z-Score ${setup.volatilityCVD.zScore.toFixed(2)}: Actividad institucional fuerte (VENTA)`)
+      }
     }
 
     return notes

@@ -7,6 +7,7 @@ Sistema profesional de validación de setups de opciones + Bitácora de trades c
 ✅ **Image Extractor - Auto-Extracción de Datos**
 - Sube capturas de TradingView o TanukiTrade
 - Claude Vision API detecta automáticamente todos los valores
+- **Nuevo: Z-Score & Actividad Institucional desde ThinkorSwim**
 - Auto-llena el formulario con datos extraídos
 - Confianza visual del % de extracción
 - Reduce tiempo manual de 15 minutos a 30 segundos
@@ -14,7 +15,8 @@ Sistema profesional de validación de setups de opciones + Bitácora de trades c
 ✅ **Setup Validator en Tiempo Real**
 - Validación automática de confluencia (AVWAP, APVP, Muros GEX)
 - Análisis CVD (divergencias alcistas/bajistas)
-- Scoring de confluencia (0-100)
+- **Nuevo: Integración Z-Score para detección de actividad institucional**
+- Scoring de confluencia (0-100) con bonus/penalización por Z-Score
 - Recomendaciones Entry/TP/SL
 - Alertas y notas personalizadas
 - Compatible con extracción automática de imágenes
@@ -114,6 +116,7 @@ vercel env add VITE_ANTHROPIC_API_KEY
 - **De TradingView (4H)**: Precio, VWAP, AVWAP, POC, APVP, EMA21, SMA200
 - **De TanukiTrade GEX**: Call Walls (C1-C3), Put Walls (P1-P3), Net GEX
 - **De CVD/Vol**: IV %, CVD Value, CVD EMA, Divergencias
+- **Nuevo: De ThinkorSwim**: Z-Score (actividad institucional), Z-Vol, volumen extremo
 
 ## 📚 Uso
 
@@ -265,7 +268,12 @@ SOP10-Trader-App/
 ✅ Tendencia: EMA21 > SMA200 (alcista) o inverso
 ✅ DTE: 30-45 días
 ✅ Delta: 20-30 OTM o 10-20 ITM
+✨ Z-Score Institucional: > +2.0 (ideal) o < -2.0 (esperar)
 ```
+
+**Z-Score Impact en Confluencia:**
+- Z-Score > +2.0: +15 puntos (Actividad institucional fuerte COMPRA)
+- Z-Score < -2.0: -10 puntos (Actividad institucional fuerte VENTA - esperar)
 
 ### Scoring
 
