@@ -1,9 +1,13 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { SetupValidation, ValidationResult } from '../types'
 import { SetupValidatorService } from '../services/setupValidator'
 import { CheckCircle2, AlertCircle } from 'lucide-react'
 
-const SetupValidator: React.FC = () => {
+interface SetupValidatorProps {
+  initialData?: SetupValidation
+}
+
+const SetupValidator: React.FC<SetupValidatorProps> = ({ initialData }) => {
   const [formData, setFormData] = useState<SetupValidation>({
     gexData: {
       callWall1: 0,
@@ -55,6 +59,18 @@ const SetupValidator: React.FC = () => {
 
   const [result, setResult] = useState<ValidationResult | null>(null)
   const [activeTab, setActiveTab] = useState<'gex' | 'price' | 'vol' | 'options'>('gex')
+
+  // Cargar datos iniciales si se proporcionan
+  useEffect(() => {
+    if (initialData) {
+      setFormData(initialData)
+      // Auto-analizar si hay datos completos
+      setTimeout(() => {
+        const validation = SetupValidatorService.validateSetup(initialData)
+        setResult(validation)
+      }, 100)
+    }
+  }, [initialData])
 
   const handleAnalyze = () => {
     const validation = SetupValidatorService.validateSetup(formData)
