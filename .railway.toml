@@ -1,0 +1,13 @@
+[build]
+builder = "dockerfile"
+
+[deploy]
+startCommand = "node dist/server.js"
+restartPolicyMaxRetries = 5
+restartPolicyWindow = 60
+
+[[deploy.healthchecks.startup]]
+command = "curl -f http://localhost:8080/health || exit 1"
+interval = 10
+timeout = 5
+retries = 5
