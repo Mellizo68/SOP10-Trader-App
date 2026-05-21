@@ -1,0 +1,5 @@
+#!/bin/bash
+# Migration script for NIXPACKS
+# Database is initialized in app.ts on server startup
+echo "✅ Database migrations completed (initialization happens on server startup)"
+exit 0
