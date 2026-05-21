@@ -18,6 +18,10 @@ COPY tsconfig.json ./
 # Build TypeScript
 RUN npm run build
 
+# Copy SQL migration files
+RUN mkdir -p dist/db/migrations && \
+    cp -r src/db/migrations/*.sql dist/db/migrations/ 2>/dev/null || true
+
 # Stage 2: Runtime
 FROM node:20-alpine
 
