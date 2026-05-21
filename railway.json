@@ -18,5 +18,8 @@
   },
   "plugins": [
     "postgres"
-  ]
+  ],
+  "env": {
+    "NIXPACKS_NO_MIGRATE": "true"
+  }
 }
