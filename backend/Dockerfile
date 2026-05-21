@@ -32,7 +32,7 @@ RUN npm ci --only=production
 COPY --from=builder /app/dist ./dist
 
 # Expose port
-EXPOSE 5000
+EXPOSE 8080
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
