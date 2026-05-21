@@ -11,10 +11,11 @@ const DIST_DIR = path.join(__dirname, 'dist');
 
 const server = http.createServer((req, res) => {
   let filePath = path.join(DIST_DIR, req.url);
-  const ext = path.extname(filePath).toLowerCase();
+  let ext = path.extname(filePath).toLowerCase();
 
   if (req.url === '/' || ext === '') {
     filePath = path.join(DIST_DIR, 'index.html');
+    ext = '.html';
   }
 
   fs.readFile(filePath, (err, content) => {
