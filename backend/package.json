@@ -2,7 +2,6 @@
   "name": "sop10-trader-backend",
   "version": "1.0.0",
   "description": "SOP10 Trader App Backend - Express + PostgreSQL + TypeScript",
-  "type": "module",
   "main": "dist/server.js",
   "scripts": {
     "dev": "node --loader ts-node/esm src/server.ts",
