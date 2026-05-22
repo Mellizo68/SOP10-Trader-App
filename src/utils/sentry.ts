@@ -1,3 +1,5 @@
+/// <reference types="vite/client" />
+
 import * as Sentry from '@sentry/react'
 import { BrowserTracing } from '@sentry/tracing'
 
@@ -5,17 +7,6 @@ import { BrowserTracing } from '@sentry/tracing'
  * Sentry Integration for Frontend Error Tracking
  * Enables automatic error capture and performance monitoring
  */
-
-declare global {
-  interface ImportMeta {
-    env: {
-      VITE_SENTRY_DSN?: string
-      MODE: string
-      DEV: boolean
-      PROD: boolean
-    }
-  }
-}
 
 export function initSentry(): void {
   const dsn = import.meta.env.VITE_SENTRY_DSN
