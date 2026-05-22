@@ -97,6 +97,17 @@ function App() {
           >
             📓 Trade Journal
           </button>
+
+          {/* Sentry Test Button (Phase 7) */}
+          <button
+            onClick={() => {
+              throw new Error('Test Sentry Error - Phase 7 Verification')
+            }}
+            className="ml-auto px-4 py-2 rounded-lg bg-red-900/50 text-red-300 hover:bg-red-900 text-sm font-semibold transition-all"
+            title="Test error tracking"
+          >
+            🧪 Test Sentry
+          </button>
         </div>
       </div>
 
