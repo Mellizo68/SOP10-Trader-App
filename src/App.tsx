@@ -6,6 +6,7 @@ import TradeJournal from './components/TradeJournal'
 import { OfflineIndicator } from './components/OfflineIndicator'
 import { SetupValidation, ValidationResult } from './types'
 import { TradeJournalService } from './services/tradeJournalService'
+import { Sentry } from './utils/sentry'
 import './styles/App.css'
 
 function App() {
@@ -101,7 +102,18 @@ function App() {
           {/* Sentry Test Button (Phase 7) */}
           <button
             onClick={() => {
-              throw new Error('Test Sentry Error - Phase 7 Verification')
+              try {
+                throw new Error('Test Sentry Error - Phase 7 Verification')
+              } catch (error) {
+                // Manually capture the error in Sentry
+                if (Sentry && typeof Sentry.captureException === 'function') {
+                  Sentry.captureException(error as Error, {
+                    tags: { test: 'sentry-verification', phase: '7' },
+                  })
+                }
+                // Also log to console for debugging
+                console.error('Error sent to Sentry:', error)
+              }
             }}
             className="ml-auto px-4 py-2 rounded-lg bg-red-900/50 text-red-300 hover:bg-red-900 text-sm font-semibold transition-all"
             title="Test error tracking"
