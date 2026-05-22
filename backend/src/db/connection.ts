@@ -1,6 +1,5 @@
 import pkg from 'pg';
 const { Pool } = pkg;
-import logger from '../utils/logger';
 
 /**
  * Database Connection Pool Configuration
@@ -20,7 +19,7 @@ import logger from '../utils/logger';
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL || 'postgresql://trader:tradersecret@localhost:5432/sop10_trader',
-
+  
   // Connection pool configuration
   max: parseInt(process.env.DB_POOL_MAX || '20', 10),              // Maximum concurrent connections
   min: parseInt(process.env.DB_POOL_MIN || '2', 10),              // Minimum connections to maintain
@@ -37,7 +36,7 @@ const pool = new Pool({
 
 // Connection acquired
 pool.on('connect', () => {
-  logger.debug('Pool: Connection acquired', {
+  console.debug('Pool: Connection acquired', {
     totalCount: pool.totalCount,
     idleCount: pool.idleCount,
     waitingCount: pool.waitingCount,
@@ -46,7 +45,7 @@ pool.on('connect', () => {
 
 // Connection available
 pool.on('acquire', () => {
-  logger.debug('Pool: Connection in use', {
+  console.debug('Pool: Connection in use', {
     totalCount: pool.totalCount,
     idleCount: pool.idleCount,
   });
@@ -54,7 +53,7 @@ pool.on('acquire', () => {
 
 // Connection error
 pool.on('error', (err, client) => {
-  logger.error('Pool: Unexpected error on idle client', {
+  console.error('Pool: Unexpected error on idle client', {
     error: err.message,
     code: (err as any).code,
     totalCount: pool.totalCount,
@@ -64,7 +63,7 @@ pool.on('error', (err, client) => {
 
 // Connection removed
 pool.on('remove', () => {
-  logger.debug('Pool: Connection removed', {
+  console.debug('Pool: Connection removed', {
     totalCount: pool.totalCount,
     idleCount: pool.idleCount,
   });
@@ -79,12 +78,12 @@ export async function testConnection(): Promise<boolean> {
     const result = await client.query('SELECT NOW()');
     client.release();
 
-    logger.info('Database connection test successful', {
+    console.error('Database connection test successful', {
       timestamp: result.rows[0].now,
     });
     return true;
   } catch (error) {
-    logger.error('Database connection test failed', {
+    console.error('Database connection test failed', {
       error: (error as Error).message,
     });
     return false;
@@ -97,11 +96,11 @@ export async function testConnection(): Promise<boolean> {
 export async function closePool(): Promise<void> {
   try {
     await pool.end();
-    logger.info('Database pool closed', {
+    console.error('Database pool closed', {
       finalCount: pool.totalCount,
     });
   } catch (error) {
-    logger.error('Error closing pool', {
+    console.error('Error closing pool', {
       error: (error as Error).message,
     });
   }

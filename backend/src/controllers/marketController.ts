@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { flashAlphaClient, GEXData, GreeksData, GammaFlipData, OptionsWallsData, VolumeOIData } from '../api/flashalpha-client.js';
 import logger from '../utils/logger.js';
 import { cache } from '../utils/cache.js';
-import { dedup } from '../utils/requestDedup.js';
+//import { dedup } from '../utils/requestDedup.js';// import { dedup } from '../utils/requestDedup.js';
 import { parseStrikeFilter, filterGreeks, filterWalls, filterVolumeOI } from '../utils/strikeFilter.js';
 
 /**
@@ -35,7 +35,8 @@ export const getGEX = async (req: Request, res: Response) => {
 
     if (!gexData) {
       // Cache miss - fetch from API with deduplication
-      gexData = await dedup.execute(`gex:${cacheKey}`, async () => {
+      const { dedup } = await import('../utils/requestDedup.js');
+      gexData = await dedup.execute(`gex:${cacheKey}`, async () => {// import { dedup } from '../utils/requestDedup.js';
         return await flashAlphaClient.getGEX(
           upperSymbol,
           strike ? parseInt(strike as string) : undefined
@@ -75,6 +76,7 @@ export const getGEX = async (req: Request, res: Response) => {
 /**
  * GET /api/market/greeks/:symbol
  * Get all Greeks data for a symbol
+ * Cached for 5 minutes per symbol
  */
 export const getGreeks = async (req: Request, res: Response) => {
   try {
@@ -87,15 +89,36 @@ export const getGreeks = async (req: Request, res: Response) => {
       });
     }
 
-    const greeksData = await flashAlphaClient.getGreeksBySymbol(symbol.toUpperCase());
+    const upperSymbol = symbol.toUpperCase();
+    const cacheKey = `market:${upperSymbol}:greeks`;
+
+    // Check cache first
+    let greeksData = cache.get<GreeksData[]>(cacheKey);
+
+    if (!greeksData) {
+      // Cache miss - fetch from API with deduplication
+      const { dedup } = await import('../utils/requestDedup.js');
+      greeksData = await dedup.execute(`greeks:${cacheKey}`, async () => {
+        return await flashAlphaClient.getGreeksBySymbol(upperSymbol);
+      });
+
+      if (greeksData) {
+        // Store in cache for 5 minutes (300 seconds)
+        cache.set(cacheKey, greeksData, 300);
+      }
+    }
 
     res.json({
       success: true,
       data: greeksData,
-      count: greeksData.length,
+      count: greeksData?.length || 0,
+      cached: cache.has(cacheKey),
     });
   } catch (error) {
-    console.error('❌ Error in getGreeks:', error);
+    logger.error('Error in getGreeks endpoint', {
+      symbol: req.params.symbol,
+      error: error instanceof Error ? error.message : String(error),
+    });
     res.status(500).json({
       success: false,
       error: 'Failed to fetch Greeks data',
@@ -106,6 +129,7 @@ export const getGreeks = async (req: Request, res: Response) => {
 /**
  * GET /api/market/gamma-flip/:symbol
  * Get Gamma Flip data (potential reversal points)
+ * Cached for 5 minutes per symbol
  */
 export const getGammaFlip = async (req: Request, res: Response) => {
   try {
@@ -118,7 +142,24 @@ export const getGammaFlip = async (req: Request, res: Response) => {
       });
     }
 
-    const flipData = await flashAlphaClient.getGammaFlip(symbol.toUpperCase());
+    const upperSymbol = symbol.toUpperCase();
+    const cacheKey = `market:${upperSymbol}:gammaflip`;
+
+    // Check cache first
+    let flipData = cache.get<GammaFlipData>(cacheKey);
+
+    if (!flipData) {
+      // Cache miss - fetch from API with deduplication
+      const { dedup } = await import('../utils/requestDedup.js');
+      flipData = await dedup.execute(`gammaflip:${cacheKey}`, async () => {
+        return await flashAlphaClient.getGammaFlip(upperSymbol);
+      });
+
+      if (flipData) {
+        // Store in cache for 5 minutes (300 seconds)
+        cache.set(cacheKey, flipData, 300);
+      }
+    }
 
     if (!flipData) {
       return res.status(404).json({
@@ -130,9 +171,13 @@ export const getGammaFlip = async (req: Request, res: Response) => {
     res.json({
       success: true,
       data: flipData,
+      cached: cache.has(cacheKey),
     });
   } catch (error) {
-    console.error('❌ Error in getGammaFlip:', error);
+    logger.error('Error in getGammaFlip endpoint', {
+      symbol: req.params.symbol,
+      error: error instanceof Error ? error.message : String(error),
+    });
     res.status(500).json({
       success: false,
       error: 'Failed to fetch Gamma Flip data',
@@ -143,6 +188,7 @@ export const getGammaFlip = async (req: Request, res: Response) => {
 /**
  * GET /api/market/walls/:symbol
  * Get Options Walls (Put/Call wall strength)
+ * Cached for 5 minutes per symbol
  */
 export const getOptionsWalls = async (req: Request, res: Response) => {
   try {
@@ -156,18 +202,40 @@ export const getOptionsWalls = async (req: Request, res: Response) => {
       });
     }
 
-    const wallsData = await flashAlphaClient.getOptionsWalls(
-      symbol.toUpperCase(),
-      strike ? parseInt(strike as string) : undefined
-    );
+    const upperSymbol = symbol.toUpperCase();
+    const cacheKey = `market:${upperSymbol}:walls:${strike || 'all'}`;
+
+    // Check cache first
+    let wallsData = cache.get<OptionsWallsData[]>(cacheKey);
+
+    if (!wallsData) {
+      // Cache miss - fetch from API with deduplication
+      const { dedup } = await import('../utils/requestDedup.js');
+      wallsData = await dedup.execute(`walls:${cacheKey}`, async () => {
+        return await flashAlphaClient.getOptionsWalls(
+          upperSymbol,
+          strike ? parseInt(strike as string) : undefined
+        );
+      });
+
+      if (wallsData) {
+        // Store in cache for 5 minutes (300 seconds)
+        cache.set(cacheKey, wallsData, 300);
+      }
+    }
 
     res.json({
       success: true,
       data: wallsData,
-      count: wallsData.length,
+      count: wallsData?.length || 0,
+      cached: cache.has(cacheKey),
     });
   } catch (error) {
-    console.error('❌ Error in getOptionsWalls:', error);
+    logger.error('Error in getOptionsWalls endpoint', {
+      symbol: req.params.symbol,
+      strike: req.query.strike,
+      error: error instanceof Error ? error.message : String(error),
+    });
     res.status(500).json({
       success: false,
       error: 'Failed to fetch Options Walls data',
@@ -178,6 +246,7 @@ export const getOptionsWalls = async (req: Request, res: Response) => {
 /**
  * GET /api/market/volume-oi/:symbol
  * Get Volume and Open Interest data
+ * Cached for 5 minutes per symbol
  */
 export const getVolumeAndOI = async (req: Request, res: Response) => {
   try {
@@ -190,15 +259,36 @@ export const getVolumeAndOI = async (req: Request, res: Response) => {
       });
     }
 
-    const voiData = await flashAlphaClient.getVolumeAndOI(symbol.toUpperCase());
+    const upperSymbol = symbol.toUpperCase();
+    const cacheKey = `market:${upperSymbol}:volumeoi`;
+
+    // Check cache first
+    let voiData = cache.get<VolumeOIData[]>(cacheKey);
+
+    if (!voiData) {
+      // Cache miss - fetch from API with deduplication
+      const { dedup } = await import('../utils/requestDedup.js');
+      voiData = await dedup.execute(`volumeoi:${cacheKey}`, async () => {
+        return await flashAlphaClient.getVolumeAndOI(upperSymbol);
+      });
+
+      if (voiData) {
+        // Store in cache for 5 minutes (300 seconds)
+        cache.set(cacheKey, voiData, 300);
+      }
+    }
 
     res.json({
       success: true,
       data: voiData,
-      count: voiData.length,
+      count: voiData?.length || 0,
+      cached: cache.has(cacheKey),
     });
   } catch (error) {
-    console.error('❌ Error in getVolumeAndOI:', error);
+    logger.error('Error in getVolumeAndOI endpoint', {
+      symbol: req.params.symbol,
+      error: error instanceof Error ? error.message : String(error),
+    });
     res.status(500).json({
       success: false,
       error: 'Failed to fetch Volume/OI data',
@@ -252,12 +342,13 @@ export const getMarketData = async (req: Request, res: Response) => {
     const cacheKey = `market:${upperSymbol}:all${filterKey}`;
 
     // Check cache first
+    const { cache } = await import('../utils/cache.js');
+    const { dedup } = await import('../utils/requestDedup.js');
     let marketData = cache.get<typeof flashAlphaClient.getMarketData extends (...args: any[]) => Promise<infer R> ? R : never>(cacheKey);
     let fromCache = false;
 
     if (!marketData) {
       // Cache miss - fetch from API with deduplication
-      // This prevents multiple simultaneous requests for the same symbol
       const freshData = await dedup.execute(cacheKey, async () => {
         return await flashAlphaClient.getMarketData(upperSymbol);
       });
@@ -388,6 +479,7 @@ export const getStats = async (req: Request, res: Response) => {
  * Get cache performance statistics
  */
 export const getCacheStats = async (req: Request, res: Response) => {
+    const { dedup } = await import('../utils/requestDedup.js');
   try {
     const cacheStats = cache.getStats();
     const dedupStats = dedup.getStats();
@@ -396,7 +488,7 @@ export const getCacheStats = async (req: Request, res: Response) => {
       success: true,
       data: {
         cache: cacheStats,
-        deduplication: dedupStats,
+        deduplication: dedupStats,// import { dedup } from '../utils/requestDedup.js';
         timestamp: new Date().toISOString(),
       },
     });

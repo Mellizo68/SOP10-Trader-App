@@ -4,7 +4,7 @@
   "description": "SOP10 Trader App Backend - Express + PostgreSQL + TypeScript",
   "main": "dist/server.js",
   "scripts": {
-    "dev": "node --loader ts-node/esm src/server.ts",
+    "dev": "npm run build && node --experimental-specifier-resolution=node dist/server.js",
     "build": "tsc",
     "start": "node dist/server.js",
     "migrate": "true",

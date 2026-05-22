@@ -1,0 +1,26 @@
+import express from 'express'
+import cors from 'cors'
+import compression from 'compression' 
+
+const app = express()
+
+// Middleware
+app.use(express.json())
+app.use(cors())
+// Response compression (gzip/brotli) - 70% payload reduction
+app.use(
+  compression({
+    level: 6, // 0-9, balance between speed (6) and compression (9)
+    threshold: 1024, // Only compress responses > 1KB
+  })
+)
+// Routes
+
+// Error handling middleware
+
+// 404 handler
+app.use((req, res) => {
+  res.status(404).json({ success: false, error: 'Not found' })
+})
+
+export default app

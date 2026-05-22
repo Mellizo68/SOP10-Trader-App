@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { TradeEntry, ValidationResult } from '../../types'
 import { TradeJournalService } from '../../services/tradeJournalService'
+import { apiClient } from '../../api/tradeClient'
 import { Plus } from 'lucide-react'
 
 interface TradeInputFormProps {
@@ -86,7 +87,8 @@ const TradeInputForm: React.FC<TradeInputFormProps> = ({ validationResult, onTra
         screenshots: []
       }
 
-      const trade = TradeJournalService.createTrade(newTrade)
+      // Use API client to create trade (with offline fallback)
+      const trade = await apiClient.createTrade(newTrade)
       setMessage(`✅ Trade creado exitosamente! ID: ${trade.id}`)
 
       // Resetear form

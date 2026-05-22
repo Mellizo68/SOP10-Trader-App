@@ -1,5 +1,4 @@
 import { Request, Response, NextFunction } from 'express';
-import logger from '../utils/logger.js';
 
 /**
  * Custom API Error Class
@@ -28,7 +27,7 @@ export const errorHandler = (
 
   // Log error with appropriate level
   if (statusCode >= 500) {
-    logger.error('Server error', {
+    console.error('Server error', {
       correlationId: req.id,
       status: statusCode,
       message,
@@ -37,7 +36,7 @@ export const errorHandler = (
       stack: err.stack,
     });
   } else {
-    logger.warn('Client error', {
+    console.warn('Client error', {
       correlationId: req.id,
       status: statusCode,
       message,

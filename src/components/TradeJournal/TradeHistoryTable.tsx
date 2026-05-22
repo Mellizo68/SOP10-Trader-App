@@ -1,8 +1,9 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import { TradeEntry, TradeFilter } from '../../types'
 import { TradeJournalService } from '../../services/tradeJournalService'
+import { apiClient } from '../../api/tradeClient'
 import TradeDetailModal from './TradeDetailModal'
-import { ChevronDown, ChevronUp, Eye } from 'lucide-react'
+import { ChevronDown, ChevronUp, Eye, Trash2, Check } from 'lucide-react'
 import { FixedSizeList as List } from 'react-window'
 
 interface TradeHistoryTableProps {
@@ -19,6 +20,8 @@ const TradeHistoryTableComponent: React.FC<TradeHistoryTableProps> = ({ trades, 
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc')
   const [selectedTrade, setSelectedTrade] = useState<TradeEntry | null>(null)
   const [showModal, setShowModal] = useState(false)
+  const [closingTradeId, setClosingTradeId] = useState<string | null>(null)
+  const [closeExitPrice, setCloseExitPrice] = useState<string>('')
 
   const filteredTrades = useMemo(() => {
     let result = TradeJournalService.getFilteredTrades(filters)
@@ -77,6 +80,35 @@ const TradeHistoryTableComponent: React.FC<TradeHistoryTableProps> = ({ trades, 
     setShowModal(false)
     setSelectedTrade(null)
     onTradeUpdated()
+  }
+
+  const handleDeleteTrade = async (tradeId: string) => {
+    if (!window.confirm('¿Estás seguro de que quieres eliminar este trade?')) {
+      return
+    }
+
+    try {
+      // Since we don't have a DELETE endpoint in the trades controller yet,
+      // we'll use TradeJournalService for now (this would be replaced with API call in Phase 5.4)
+      TradeJournalService.deleteTrade(tradeId)
+      onTradeUpdated()
+    } catch (error) {
+      console.error('Error deleting trade:', error)
+      alert('Error al eliminar el trade')
+    }
+  }
+
+  const handleCloseTrade = async (tradeId: string, exitPrice: number) => {
+    try {
+      const exitDate = new Date()
+      await apiClient.closeTrade(tradeId, exitPrice, exitDate)
+      setClosingTradeId(null)
+      setCloseExitPrice('')
+      onTradeUpdated()
+    } catch (error) {
+      console.error('Error closing trade:', error)
+      alert('Error al cerrar el trade')
+    }
   }
 
   const SortIcon = ({ field }: { field: SortField }) => {
@@ -210,6 +242,10 @@ const TradeHistoryTableComponent: React.FC<TradeHistoryTableProps> = ({ trades, 
               itemData={{
                 trades: filteredTrades,
                 onSelectTrade: handleSelectTrade,
+                onDeleteTrade: handleDeleteTrade,
+                onCloseTrade: (trade: TradeEntry) => {
+                  setClosingTradeId(trade.id)
+                },
               }}
             >
               {({ index, style, data }) => {
@@ -254,13 +290,34 @@ const TradeHistoryTableComponent: React.FC<TradeHistoryTableProps> = ({ trades, 
                               {trade.status}
                             </span>
                           </td>
-                          <td className="py-3 px-4 text-center">
+                          <td className="py-3 px-4 text-center space-x-1">
                             <button
                               onClick={() => data.onSelectTrade(trade)}
-                              className="inline-flex items-center gap-1 bg-blue-600/50 hover:bg-blue-600 text-blue-300 px-2 py-1 rounded transition-colors"
+                              className="inline-flex items-center gap-1 bg-blue-600/50 hover:bg-blue-600 text-blue-300 px-2 py-1 rounded transition-colors text-xs"
+                              title="View details"
                             >
                               <Eye className="w-4 h-4" />
                             </button>
+                            {trade.status === 'open' && (
+                              <>
+                                <button
+                                  onClick={() => {
+                                    data.onCloseTrade(trade)
+                                  }}
+                                  className="inline-flex items-center gap-1 bg-green-600/50 hover:bg-green-600 text-green-300 px-2 py-1 rounded transition-colors text-xs"
+                                  title="Close trade"
+                                >
+                                  <Check className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={() => data.onDeleteTrade(trade.id)}
+                                  className="inline-flex items-center gap-1 bg-red-600/50 hover:bg-red-600 text-red-300 px-2 py-1 rounded transition-colors text-xs"
+                                  title="Delete trade"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </>
+                            )}
                           </td>
                         </tr>
                       </tbody>
@@ -273,7 +330,52 @@ const TradeHistoryTableComponent: React.FC<TradeHistoryTableProps> = ({ trades, 
         </div>
       )}
 
-      {/* Modal */}
+      {/* Close Trade Modal */}
+      {closingTradeId && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-gray-800 rounded-lg p-6 max-w-sm w-full">
+            <h3 className="text-xl font-bold text-white mb-4">Close Trade</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-gray-300 text-sm font-semibold mb-2">Exit Price</label>
+                <input
+                  type="number"
+                  value={closeExitPrice}
+                  onChange={(e) => setCloseExitPrice(e.target.value)}
+                  placeholder="0.00"
+                  step="0.01"
+                  className="w-full bg-gray-700/50 border border-gray-600 rounded px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
+                  autoFocus
+                />
+              </div>
+              <div className="flex gap-4 justify-end">
+                <button
+                  onClick={() => {
+                    setClosingTradeId(null)
+                    setCloseExitPrice('')
+                  }}
+                  className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    if (closeExitPrice && closingTradeId) {
+                      handleCloseTrade(closingTradeId, parseFloat(closeExitPrice))
+                    }
+                  }}
+                  disabled={!closeExitPrice}
+                  className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white rounded transition-colors"
+                >
+                  Close Trade
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Trade Detail Modal */}
       {showModal && selectedTrade && (
         <TradeDetailModal
           trade={selectedTrade}

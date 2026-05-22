@@ -45,78 +45,106 @@ const GreeksTableComponent: React.FC<GreeksTableProps> = ({ greeks, loading, err
   // Use virtualized table for large datasets
   // render all greeks using virtual scrolling instead of just top 5
   const columns = [
-    { label: 'Strike', key: 'strike' as const },
-    { label: 'Exp', key: 'expiration' as const },
-    { label: 'Type', key: 'optionType' as const, align: 'center' as const },
-    { label: 'Δ Delta', key: 'delta' as const, align: 'right' as const },
-    { label: 'Γ Gamma', key: 'gamma' as const, align: 'right' as const },
-    { label: 'Θ Theta', key: 'theta' as const, align: 'right' as const },
-    { label: 'ν Vega', key: 'vega' as const, align: 'right' as const },
-    { label: 'IV %', key: 'iv' as const, align: 'right' as const },
-    { label: 'Price', key: 'price' as const, align: 'right' as const },
-  ];
-
-  const renderRow = (data: GreeksData) => (
-    <>
-      {/* Strike */}
-      <td className="px-3 py-2 font-semibold text-gray-900">
-        ${data.strike}
-      </td>
-
-      {/* Expiration */}
-      <td className="px-3 py-2 text-gray-600 text-xs">
-        {new Date(data.expiration).toLocaleDateString('en-US', {
+    {
+      key: 'strike',
+      label: 'Strike',
+      render: (row: GreeksData) => `$${row.strike}`,
+      className: 'w-20',
+    },
+    {
+      key: 'expiration',
+      label: 'Exp',
+      render: (row: GreeksData) =>
+        new Date(row.expiration).toLocaleDateString('en-US', {
           month: 'short',
           day: 'numeric',
-        })}
-      </td>
-
-      {/* Type */}
-      <td className="px-3 py-2 text-center">
+        }),
+      className: 'w-20',
+    },
+    {
+      key: 'optionType',
+      label: 'Type',
+      render: (row: GreeksData) => (
         <span
           className={`px-2 py-1 rounded font-bold text-xs ${
-            data.optionType === 'call'
+            row.optionType === 'call'
               ? 'bg-green-100 text-green-800'
               : 'bg-red-100 text-red-800'
           }`}
         >
-          {data.optionType === 'call' ? 'CALL' : 'PUT'}
+          {row.optionType === 'call' ? 'CALL' : 'PUT'}
         </span>
-      </td>
-
-      {/* Delta */}
-      <td className="px-3 py-2 text-right font-mono text-gray-900">
+      ),
+      className: 'w-16',
+      align: 'center' as const,
+    },
+    {
+      key: 'delta',
+      label: 'Δ Delta',
+      render: (row: GreeksData) => (
         <span className="text-blue-600 font-semibold">
-          {data.delta > 0 ? '+' : ''}{data.delta.toFixed(3)}
+          {row.delta > 0 ? '+' : ''}{row.delta.toFixed(3)}
         </span>
-      </td>
-
-      {/* Gamma */}
-      <td className="px-3 py-2 text-right font-mono text-purple-600 font-semibold">
-        {data.gamma.toFixed(4)}
-      </td>
-
-      {/* Theta */}
-      <td className="px-3 py-2 text-right font-mono text-red-600 font-semibold">
-        {data.theta.toFixed(3)}
-      </td>
-
-      {/* Vega */}
-      <td className="px-3 py-2 text-right font-mono text-green-600 font-semibold">
-        {data.vega.toFixed(3)}
-      </td>
-
-      {/* IV */}
-      <td className="px-3 py-2 text-right font-mono text-orange-600 font-semibold">
-        {data.iv.toFixed(1)}%
-      </td>
-
-      {/* Price */}
-      <td className="px-3 py-2 text-right font-semibold text-gray-900">
-        ${data.price.toFixed(2)}
-      </td>
-    </>
-  );
+      ),
+      className: 'w-24',
+      align: 'right' as const,
+    },
+    {
+      key: 'gamma',
+      label: 'Γ Gamma',
+      render: (row: GreeksData) => (
+        <span className="text-purple-600 font-semibold">
+          {row.gamma.toFixed(4)}
+        </span>
+      ),
+      className: 'w-24',
+      align: 'right' as const,
+    },
+    {
+      key: 'theta',
+      label: 'Θ Theta',
+      render: (row: GreeksData) => (
+        <span className="text-red-600 font-semibold">
+          {row.theta.toFixed(3)}
+        </span>
+      ),
+      className: 'w-24',
+      align: 'right' as const,
+    },
+    {
+      key: 'vega',
+      label: 'ν Vega',
+      render: (row: GreeksData) => (
+        <span className="text-green-600 font-semibold">
+          {row.vega.toFixed(3)}
+        </span>
+      ),
+      className: 'w-24',
+      align: 'right' as const,
+    },
+    {
+      key: 'iv',
+      label: 'IV %',
+      render: (row: GreeksData) => (
+        <span className="text-orange-600 font-semibold">
+          {row.iv.toFixed(1)}%
+        </span>
+      ),
+      className: 'w-20',
+      align: 'right' as const,
+    },
+    {
+      key: 'price',
+      label: 'Price',
+      render: (row: GreeksData) => (
+        <span className="font-semibold text-gray-900">
+          ${row.price.toFixed(2)}
+        </span>
+      ),
+      className: 'w-24',
+      align: 'right' as const,
+    },
+  ];
 
   return (
     <div className="bg-white border border-gray-200 rounded-lg overflow-hidden flex flex-col">
@@ -124,18 +152,11 @@ const GreeksTableComponent: React.FC<GreeksTableProps> = ({ greeks, loading, err
         <h3 className="font-bold text-white">Greeks (Virtualized - {greeks.length} Options)</h3>
       </div>
 
-      <VirtualizedTable<GreeksData>
+      <VirtualizedTable
         data={greeks}
-        height={400}
-        itemSize={40}
         columns={columns}
-        renderRow={renderRow}
-        headerClass="bg-gray-50 border-b border-gray-200"
-        rowClass="border-b border-gray-100 hover:bg-blue-50 transition-colors"
-        footer={`Showing {greeks.length} options • Last updated: ${
-          greeks[0] ? new Date(greeks[0].timestamp).toLocaleTimeString() : 'N/A'
-        }`}
-        emptyMessage="No Greeks data available"
+        rowHeight={40}
+        maxHeight={600}
       />
     </div>
   );

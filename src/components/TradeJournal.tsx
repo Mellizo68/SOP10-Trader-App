@@ -1,6 +1,7 @@
 import React, { useState, useEffect, lazy, Suspense } from 'react'
 import { TradeEntry, ValidationResult } from '../types'
 import { TradeJournalService } from '../services/tradeJournalService'
+import { apiClient } from '../api/tradeClient'
 import { loadTrades, clearTrades } from '../utils/localStorage'
 import { BarChart3, Download, Trash2 } from 'lucide-react'
 import { LoadingSpinner } from './LoadingSpinner'
@@ -24,10 +25,21 @@ const TradeJournal: React.FC<TradeJournalProps> = ({ validationResult, onTradeCr
   const [trades, setTrades] = useState<TradeEntry[]>([])
   const [refreshTrigger, setRefreshTrigger] = useState(0)
 
-  // Cargar trades al montar
+  // Cargar trades from API (with localStorage fallback)
   useEffect(() => {
-    const loadedTrades = loadTrades()
-    setTrades(loadedTrades)
+    const loadTradesFromAPI = async () => {
+      try {
+        const loadedTrades = await apiClient.getTrades({ limit: 500 })
+        setTrades(loadedTrades)
+      } catch (error) {
+        console.error('Error loading trades from API:', error)
+        // Fallback to localStorage
+        const cachedTrades = loadTrades()
+        setTrades(cachedTrades)
+      }
+    }
+
+    loadTradesFromAPI()
   }, [refreshTrigger])
 
   const handleTradeCreated = (trade: TradeEntry) => {

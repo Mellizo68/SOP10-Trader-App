@@ -1,77 +1,53 @@
-import app from './app.js';
-import dotenv from 'dotenv';
-import logger from './utils/logger.js';
-import { initSentry } from './utils/sentry.js';
-import { testConnection, closePool } from './db/connection.js';
-
-dotenv.config({ path: '.env.local' });
-
-// Initialize Sentry for error tracking
-initSentry();
-
-const PORT = parseInt(process.env.PORT || '5000', 10);
-
-/**
- * Startup sequence with database validation
- */
 async function startServer() {
-  try {
-    // Test database connection before starting server
-    const dbConnected = await testConnection();
+  // Import EVERYTHING inside the function - nothing at module level
+  const express = (await import('express')).default
+  const cors = (await import('cors')).default
+  const compression = (await import('compression')).default
 
-    if (!dbConnected) {
-      logger.warn('Database connection failed, but server will continue to start', {
-        note: 'Database must be available for API endpoints to work',
-      });
+  const PORT = process.env.PORT || 3000
+  const app = express()
+
+  // Middleware
+  app.use(express.json())
+  app.use(cors())
+  app.use(compression({ level: 6, threshold: 1024 }))
+
+  // Import routes
+  const tradesRouter = (await import('./routes/trades.js')).default
+  const marketRouter = (await import('./routes/market.js')).default
+  const statsRouter = (await import('./routes/stats.js')).default
+
+  // Register routes
+  app.use('/api/trades', tradesRouter)
+  app.use('/api/market', marketRouter)
+  app.use('/api/stats', statsRouter)
+
+  // Health endpoints
+  app.get('/health', (req, res) => {
+    res.json({ status: 'ok', timestamp: new Date().toISOString() })
+  })
+
+  app.get('/metrics', async (req, res) => {
+    try {
+      const { metrics } = await import('./utils/metrics.js')
+      res.json(metrics.getMetrics())
+    } catch {
+      res.status(500).json({ error: 'Metrics unavailable' })
     }
+  })
 
-    const server = app.listen(PORT, () => {
-      logger.info('Backend server started', {
-        port: PORT,
-        environment: process.env.NODE_ENV || 'development',
-        apiUrl: `http://localhost:${PORT}/api`,
-        marketDataUrl: `http://localhost:${PORT}/api/market/data/:symbol`,
-        databaseStatus: dbConnected ? 'connected' : 'disconnected',
-      });
-    });
+  // 404 handler
+  app.use((req, res) => {
+    res.status(404).json({ success: false, error: 'Not found' })
+  })
 
-    /**
-     * Graceful shutdown with connection pool cleanup
-     */
-    const handleShutdown = (signal: string) => {
-      logger.info(`${signal} received, starting graceful shutdown`, {
-        timestamp: new Date().toISOString(),
-      });
-
-      server.close(async () => {
-        // Close database connections
-        await closePool();
-
-        logger.info('Server and database connections closed', {
-          timestamp: new Date().toISOString(),
-        });
-        process.exit(0);
-      });
-
-      // Force shutdown after 10 seconds if graceful shutdown fails
-      setTimeout(() => {
-        logger.error('Forced shutdown after graceful shutdown timeout', {
-          timeout: '10s',
-        });
-        process.exit(1);
-      }, 10000);
-    };
-
-    process.on('SIGTERM', () => handleShutdown('SIGTERM'));
-    process.on('SIGINT', () => handleShutdown('SIGINT'));
-
-  } catch (error) {
-    logger.error('Failed to start server', {
-      error: (error as Error).message,
-    });
-    process.exit(1);
-  }
+  // Start
+  app.listen(PORT, () => {
+    console.log(`✅ Server running on http://localhost:${PORT}`)
+  })
 }
 
-// Start the server
-startServer();
+startServer().catch(err => {
+  console.error('❌ Failed to start server:', err.message)
+  process.exit(1)
+})

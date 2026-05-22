@@ -3,6 +3,7 @@ import { RefreshCw } from 'lucide-react';
 import { useMarketData } from '../../hooks/useMarketData';
 import { GEXCard } from './GEXCard';
 import { GreeksTable } from './GreeksTable';
+import { VirtualizedTable } from '../VirtualizedTable';
 
 interface MarketAnalysisTabProps {
   symbol?: string;
@@ -28,11 +29,26 @@ const MarketAnalysisTabComponent: React.FC<MarketAnalysisTabProps> = ({
   // Debounced symbol (updates after 300ms of no input changes)
   const [debouncedSymbol, setDebouncedSymbol] = useState(symbol);
 
+  // Strike filtering options (Sprint 2: Payload Filtering)
+  const [strikeRange, setStrikeRange] = useState<number>(20); // Default: ATM ± 20%
+  const [useCustomRange, setUseCustomRange] = useState(false);
+  const [customMin, setCustomMin] = useState<number | undefined>(undefined);
+  const [customMax, setCustomMax] = useState<number | undefined>(undefined);
+
   // Debounce timer reference
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Fetch data using debounced symbol
-  const { data, loading, error, lastUpdated, refetch } = useMarketData(debouncedSymbol);
+  // Build filter options based on selection
+  const filterOptions = useCustomRange
+    ? { strikeMin: customMin, strikeMax: customMax }
+    : { strikeRange: strikeRange };
+
+  // Fetch data using debounced symbol with strike filters
+  const { data, loading, error, lastUpdated, refetch } = useMarketData(
+    debouncedSymbol,
+    60000, // 60 second polling
+    filterOptions
+  );
 
   const handleSymbolChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newSymbol = e.target.value.toUpperCase();
@@ -68,28 +84,117 @@ const MarketAnalysisTabComponent: React.FC<MarketAnalysisTabProps> = ({
   return (
     <div className="space-y-4">
       {/* Header with Symbol Input and Refresh */}
-      <div className="flex items-center gap-3 bg-white p-4 rounded-lg border border-gray-200">
-        <div className="flex-1">
-          <label className="text-sm font-semibold text-gray-700 block mb-2">
-            📊 Symbol
-          </label>
-          <input
-            type="text"
-            value={currentSymbol}
-            onChange={handleSymbolChange}
-            placeholder="Enter symbol (e.g., SPY, QQQ, TSLA)"
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
+      <div className="space-y-3 bg-white p-4 rounded-lg border border-gray-200">
+        <div className="flex items-center gap-3">
+          <div className="flex-1">
+            <label className="text-sm font-semibold text-gray-700 block mb-2">
+              📊 Symbol
+            </label>
+            <input
+              type="text"
+              value={currentSymbol}
+              onChange={handleSymbolChange}
+              placeholder="Enter symbol (e.g., SPY, QQQ, TSLA)"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          <button
+            onClick={handleRefresh}
+            disabled={loading}
+            className="mt-6 flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 text-white font-semibold rounded-lg transition-colors"
+          >
+            <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
+            {loading ? 'Loading...' : 'Refresh'}
+          </button>
         </div>
 
-        <button
-          onClick={handleRefresh}
-          disabled={loading}
-          className="mt-6 flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 text-white font-semibold rounded-lg transition-colors"
-        >
-          <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
-          {loading ? 'Loading...' : 'Refresh'}
-        </button>
+        {/* Strike Range Filtering Controls */}
+        <div className="border-t pt-3">
+          <label className="text-sm font-semibold text-gray-700 block mb-2">
+            ⚡ Strike Range Filter (Payload Reduction)
+          </label>
+
+          <div className="space-y-2">
+            {/* Filter Mode Toggle */}
+            <div className="flex gap-4">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  checked={!useCustomRange}
+                  onChange={() => setUseCustomRange(false)}
+                  className="w-4 h-4"
+                />
+                <span className="text-sm text-gray-700">ATM ± Range %</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  checked={useCustomRange}
+                  onChange={() => setUseCustomRange(true)}
+                  className="w-4 h-4"
+                />
+                <span className="text-sm text-gray-700">Custom Strike Range</span>
+              </label>
+            </div>
+
+            {/* ATM Range Input */}
+            {!useCustomRange && (
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  value={strikeRange}
+                  onChange={(e) => setStrikeRange(Math.max(1, parseInt(e.target.value) || 20))}
+                  min="1"
+                  max="100"
+                  className="w-20 px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <span className="text-xs text-gray-600">% above/below current price</span>
+                <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">
+                  Default: 20% (80-90% payload reduction)
+                </span>
+              </div>
+            )}
+
+            {/* Custom Strike Range Inputs */}
+            {useCustomRange && (
+              <div className="flex gap-2 items-center">
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs text-gray-600">Min Strike</label>
+                  <input
+                    type="number"
+                    value={customMin ?? ''}
+                    onChange={(e) => setCustomMin(e.target.value ? parseFloat(e.target.value) : undefined)}
+                    placeholder="Min"
+                    className="w-24 px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <span className="text-gray-500 mt-4">→</span>
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs text-gray-600">Max Strike</label>
+                  <input
+                    type="number"
+                    value={customMax ?? ''}
+                    onChange={(e) => setCustomMax(e.target.value ? parseFloat(e.target.value) : undefined)}
+                    placeholder="Max"
+                    className="w-24 px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <span className="text-xs text-gray-600 mt-4">(or leave blank for no limit)</span>
+              </div>
+            )}
+
+            {/* Active Filter Display */}
+            {(useCustomRange || strikeRange !== 20) && (
+              <div className="text-xs bg-green-50 text-green-700 px-2 py-1 rounded border border-green-200">
+                {useCustomRange
+                  ? `Custom filter: ${customMin ?? 'no min'} - ${customMax ?? 'no max'}`
+                  : `ATM ± ${strikeRange}% (active)`
+                }
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Error Alert */}
@@ -115,115 +220,139 @@ const MarketAnalysisTabComponent: React.FC<MarketAnalysisTabProps> = ({
         error={error}
       />
 
-      {/* Options Walls */}
+      {/* Options Walls - Virtualized */}
       {data?.walls && data.walls.count > 0 && (
         <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
           <div className="bg-gradient-to-r from-purple-500 to-purple-600 p-3">
-            <h3 className="font-bold text-white">Options Walls</h3>
+            <h3 className="font-bold text-white">Options Walls (Virtualized - {data.walls.count} total)</h3>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-gray-50 border-b border-gray-200">
-                  <th className="px-4 py-2 text-left font-semibold">Strike</th>
-                  <th className="px-4 py-2 text-left font-semibold">Put Wall</th>
-                  <th className="px-4 py-2 text-left font-semibold">Call Wall</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.walls.items.slice(0, 5).map((wall, idx) => (
-                  <tr
-                    key={idx}
-                    className="border-b border-gray-100 hover:bg-gray-50"
-                  >
-                    <td className="px-4 py-2 font-semibold">${wall.strikePrice}</td>
-                    <td className="px-4 py-2">
-                      <div className="flex items-center gap-2">
-                        <div
-                          className={`px-2 py-1 rounded text-xs font-bold ${
-                            wall.putWall.level === 'strong'
-                              ? 'bg-red-200 text-red-800'
-                              : wall.putWall.level === 'moderate'
-                              ? 'bg-orange-200 text-orange-800'
-                              : 'bg-gray-200 text-gray-800'
-                          }`}
-                        >
-                          {wall.putWall.level.toUpperCase()}
-                        </div>
-                        <span className="text-gray-600">
-                          {(wall.putWall.contracts / 1000).toFixed(0)}K
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-2">
-                      <div className="flex items-center gap-2">
-                        <div
-                          className={`px-2 py-1 rounded text-xs font-bold ${
-                            wall.callWall.level === 'strong'
-                              ? 'bg-green-200 text-green-800'
-                              : wall.callWall.level === 'moderate'
-                              ? 'bg-yellow-200 text-yellow-800'
-                              : 'bg-gray-200 text-gray-800'
-                          }`}
-                        >
-                          {wall.callWall.level.toUpperCase()}
-                        </div>
-                        <span className="text-gray-600">
-                          {(wall.callWall.contracts / 1000).toFixed(0)}K
-                        </span>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <VirtualizedTable
+            data={data.walls.items}
+            columns={[
+              {
+                key: 'strikePrice',
+                label: 'Strike',
+                render: (row) => `$${row.strikePrice}`,
+                className: 'w-24',
+              },
+              {
+                key: 'putWall',
+                label: 'Put Wall',
+                render: (row) => (
+                  <div className="flex items-center gap-2">
+                    <div
+                      className={`px-2 py-1 rounded text-xs font-bold ${
+                        row.putWall.level === 'strong'
+                          ? 'bg-red-200 text-red-800'
+                          : row.putWall.level === 'moderate'
+                          ? 'bg-orange-200 text-orange-800'
+                          : 'bg-gray-200 text-gray-800'
+                      }`}
+                    >
+                      {row.putWall.level.toUpperCase()}
+                    </div>
+                    <span className="text-gray-600">
+                      {(row.putWall.contracts / 1000).toFixed(0)}K
+                    </span>
+                  </div>
+                ),
+                className: 'flex-1',
+              },
+              {
+                key: 'callWall',
+                label: 'Call Wall',
+                render: (row) => (
+                  <div className="flex items-center gap-2">
+                    <div
+                      className={`px-2 py-1 rounded text-xs font-bold ${
+                        row.callWall.level === 'strong'
+                          ? 'bg-green-200 text-green-800'
+                          : row.callWall.level === 'moderate'
+                          ? 'bg-yellow-200 text-yellow-800'
+                          : 'bg-gray-200 text-gray-800'
+                      }`}
+                    >
+                      {row.callWall.level.toUpperCase()}
+                    </div>
+                    <span className="text-gray-600">
+                      {(row.callWall.contracts / 1000).toFixed(0)}K
+                    </span>
+                  </div>
+                ),
+                className: 'flex-1',
+              },
+            ]}
+            rowHeight={40}
+            maxHeight={600}
+          />
         </div>
       )}
 
-      {/* Volume & OI */}
+      {/* Volume & OI - Virtualized */}
       {data?.volumeOI && data.volumeOI.count > 0 && (
         <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
           <div className="bg-gradient-to-r from-indigo-500 to-indigo-600 p-3">
-            <h3 className="font-bold text-white">Volume & Open Interest</h3>
+            <h3 className="font-bold text-white">Volume & Open Interest (Virtualized - {data.volumeOI.count} total)</h3>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-gray-50 border-b border-gray-200">
-                  <th className="px-4 py-2 text-left font-semibold">Strike</th>
-                  <th className="px-4 py-2 text-right font-semibold">Call OI</th>
-                  <th className="px-4 py-2 text-right font-semibold">Call Vol</th>
-                  <th className="px-4 py-2 text-right font-semibold">Put OI</th>
-                  <th className="px-4 py-2 text-right font-semibold">Put Vol</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.volumeOI.items.slice(0, 5).map((voi, idx) => (
-                  <tr
-                    key={idx}
-                    className="border-b border-gray-100 hover:bg-gray-50"
-                  >
-                    <td className="px-4 py-2 font-semibold">${voi.strikePrice}</td>
-                    <td className="px-4 py-2 text-right text-green-600 font-mono">
-                      {(voi.callOI / 1000).toFixed(0)}K
-                    </td>
-                    <td className="px-4 py-2 text-right text-green-600 font-mono">
-                      {(voi.callVolume / 1000).toFixed(0)}K
-                    </td>
-                    <td className="px-4 py-2 text-right text-red-600 font-mono">
-                      {(voi.putOI / 1000).toFixed(0)}K
-                    </td>
-                    <td className="px-4 py-2 text-right text-red-600 font-mono">
-                      {(voi.putVolume / 1000).toFixed(0)}K
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <VirtualizedTable
+            data={data.volumeOI.items}
+            columns={[
+              {
+                key: 'strikePrice',
+                label: 'Strike',
+                render: (row) => `$${row.strikePrice}`,
+                className: 'w-24',
+              },
+              {
+                key: 'callOI',
+                label: 'Call OI',
+                render: (row) => (
+                  <span className="text-green-600 font-mono">
+                    {(row.callOI / 1000).toFixed(0)}K
+                  </span>
+                ),
+                className: 'w-24',
+                align: 'right',
+              },
+              {
+                key: 'callVolume',
+                label: 'Call Vol',
+                render: (row) => (
+                  <span className="text-green-600 font-mono">
+                    {(row.callVolume / 1000).toFixed(0)}K
+                  </span>
+                ),
+                className: 'w-24',
+                align: 'right',
+              },
+              {
+                key: 'putOI',
+                label: 'Put OI',
+                render: (row) => (
+                  <span className="text-red-600 font-mono">
+                    {(row.putOI / 1000).toFixed(0)}K
+                  </span>
+                ),
+                className: 'w-24',
+                align: 'right',
+              },
+              {
+                key: 'putVolume',
+                label: 'Put Vol',
+                render: (row) => (
+                  <span className="text-red-600 font-mono">
+                    {(row.putVolume / 1000).toFixed(0)}K
+                  </span>
+                ),
+                className: 'w-24',
+                align: 'right',
+              },
+            ]}
+            rowHeight={40}
+            maxHeight={600}
+          />
         </div>
       )}
 
