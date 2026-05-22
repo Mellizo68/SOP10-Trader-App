@@ -27,6 +27,17 @@ Sistema profesional de validación de setups de opciones + Bitácora de trades c
 - Position sizing automático
 - Soporta 13 estrategias diferentes
 
+✅ **Market Analysis Dashboard (NEW - Fase 8, Paso 3)**
+- **Real-time Market Data** desde FlashAlpha API
+- **GEX (Gamma Exposure)**: Visualización de niveles de exposición gamma
+- **Greeks Table**: Delta, Gamma, Theta, Vega, IV para opciones
+- **Gamma Flip Alerts**: Alertas automáticas cuando hay cambio de dirección
+- **Options Walls**: Muros de opciones put/call por strike
+- **Volume & Open Interest**: Análisis de volumen e interés abierto
+- Polling automático cada 10 segundos
+- Symbol seleccionable (SPY, QQQ, TSLA, etc.)
+- Refresh manual disponible
+
 ✅ **Bitácora de Trades Completa (NEW - Fase 4)**
 - Auto-completa desde SetupValidator + ExitCalculator
 - Registra entrada, salida y P/L automáticamente
@@ -189,6 +200,68 @@ vercel env add VITE_ANTHROPIC_API_KEY
 - **Export**: Descarga CSV con todos los trades
 - **Analytics**: 2 tabs - Overview (básico) + Advanced (profundo)
 - **Persistencia**: Todos los datos en localStorage (local)
+
+### Market Analysis Dashboard
+
+**Acceso**: Tab "📊 Market Data" en Trade Journal
+
+#### Características:
+
+1. **Symbol Input & Refresh**
+   - Campo para ingresar símbolo (SPY, QQQ, TSLA, etc.)
+   - Botón Refresh con spinner durante carga
+   - Polling automático cada 10 segundos
+
+2. **GEX Card**
+   - Valor de GEX formateado en millones (ej: $12.5M)
+   - Porcentaje de GEX con indicador de tendencia
+   - Alerta de Gamma Flip cuando flipLevel > 0.7
+   - Muestra dirección (UP/DOWN) y fortaleza del flip
+
+3. **Greeks Table** (Top 5 opciones)
+   - Strike Price
+   - Expiration (formato abreviado: May 21)
+   - Option Type (CALL/PUT badge color-coded)
+   - Delta (azul) - probabilidad de ejercicio
+   - Gamma (púrpura) - sensibilidad del delta
+   - Theta (rojo) - decay de tiempo
+   - Vega (verde) - sensibilidad a IV
+   - IV% (naranja) - volatilidad implícita
+   - Precio de la opción
+
+4. **Options Walls Table**
+   - Strike Price
+   - Put Wall: nivel de fortaleza + cantidad de contratos
+   - Call Wall: nivel de fortaleza + cantidad de contratos
+   - Colores: Strong (rojo/verde), Moderate (naranja/amarillo), Weak (gris)
+
+5. **Volume & Open Interest Table**
+   - Strike Price
+   - Call Open Interest
+   - Call Volume
+   - Put Open Interest
+   - Put Volume
+   - Todos en formato K (miles)
+
+#### Flujo de Uso:
+
+```
+1. Abre Trade Journal → Tab "📊 Market Data"
+2. Ingresa o cambia el Symbol (ej: SPY)
+3. Observa:
+   - GEX levels y gamma flip alerts
+   - Greeks para las opciones más relevantes
+   - Muros de opciones donde hay concentración
+   - Volumen e interés abierto
+4. Click "Refresh" para actualizar manualmente
+   (O espera 10 segundos para polling automático)
+5. Usa datos para confirmar entries/exits en tus trades
+```
+
+#### Estado de Carga:
+- Loading spinner mientras se obtienen datos del backend
+- Error alerts si la API no responde
+- Last updated timestamp
 
 ### Setup Validator
 
@@ -356,7 +429,12 @@ SOP10-Trader-App/
 │   │       ├── TradeInputForm.tsx            (Crear nuevo trade)
 │   │       ├── TradeHistoryTable.tsx         (Tabla de trades con filtros)
 │   │       ├── TradeDetailModal.tsx          (Ver/editar/cerrar trades)
-│   │       └── AnalyticsTab.tsx              (Análisis avanzado + charts)
+│   │       ├── AnalyticsTab.tsx              (Análisis avanzado + charts)
+│   │       ├── GEXCard.tsx                   (NEW: Market Data - Gamma Exposure)
+│   │       ├── GreeksTable.tsx               (NEW: Market Data - Greeks)
+│   │       └── MarketAnalysisTab.tsx         (NEW: Market Data Dashboard)
+│   ├── hooks/
+│   │   └── useMarketData.ts                  (NEW: Custom hook - Market data polling)
 │   ├── services/
 │   │   ├── imageExtractor.ts                 (Claude Vision integration)
 │   │   ├── setupValidator.ts                 (Lógica de validación)
@@ -376,6 +454,27 @@ SOP10-Trader-App/
 ├── tsconfig.node.json
 ├── vite.config.ts
 └── vercel.json
+├── backend/                                  (NEW: Market Data API - Fase 8)
+│   ├── src/
+│   │   ├── api/
+│   │   │   └── flashalpha-client.ts         (FlashAlpha API client)
+│   │   ├── controllers/
+│   │   │   └── marketController.ts          (Market data endpoints)
+│   │   ├── routes/
+│   │   │   └── market.ts                    (Market data routes)
+│   │   ├── middleware/
+│   │   │   ├── errorHandler.ts              (Global error handling)
+│   │   │   └── auth.ts                      (Auth middleware)
+│   │   ├── utils/
+│   │   │   └── validators.ts                (Request validation)
+│   │   ├── types.ts                         (TypeScript interfaces)
+│   │   ├── app.ts                           (Express app setup)
+│   │   └── server.ts                        (Server entry point)
+│   ├── .env.example                         (Backend env template)
+│   ├── .env.local                           (Backend env local)
+│   ├── package.json
+│   ├── tsconfig.json
+│   └── README.md
 ```
 
 ## 🎯 Guía Rápida SOP10
@@ -409,6 +508,98 @@ SOP10-Trader-App/
 - **Crédito**: TP 50% prima recibida
 - **Débito**: TP 200% del costo (el doble)
 - **SL**: -200% o cierre fuera del muro
+
+## ⚙️ Configuración Market Data API (Fase 8)
+
+### Backend Setup
+
+El backend expone endpoints para obtener datos de mercado en tiempo real desde FlashAlpha API:
+
+```bash
+# Terminal 1: Backend
+cd backend
+npm install
+npm run build      # Compile TypeScript
+npm start          # Inicia en http://localhost:5001
+
+# Terminal 2: Frontend
+cd SOP10-Trader-App
+npm install
+npm run dev        # Inicia en http://localhost:3000
+```
+
+### Variables de Entorno (Backend)
+
+En `backend/.env.local`:
+```bash
+# Port & Environment
+PORT=5001
+NODE_ENV=development
+
+# FlashAlpha API
+FLASHALPHA_API_KEY=your_api_key_here
+FLASHALPHA_BASE_URL=https://api.flashalpha.co
+
+# Database (Fase 5)
+DATABASE_URL=postgresql://user:password@localhost:5432/sop10
+```
+
+### API Endpoints
+
+**Market Data General:**
+```
+GET /api/market/data/:symbol
+```
+
+Retorna objeto con:
+- `gex`: Gamma Exposure data
+- `gammaFlip`: Gamma flip alerts
+- `greeks`: Array de Greeks (Delta, Gamma, Theta, Vega, IV)
+- `walls`: Options walls (put/call)
+- `volumeOI`: Volume & Open Interest data
+
+**Individual Endpoints:**
+```
+GET /api/market/gex/:symbol
+GET /api/market/greeks/:symbol
+GET /api/market/gamma-flip/:symbol
+GET /api/market/walls/:symbol
+GET /api/market/volume-oi/:symbol
+GET /api/market/health
+GET /api/market/stats
+```
+
+### Frontend Integration
+
+El frontend usa un custom hook `useMarketData(symbol)`:
+
+```typescript
+const { data, loading, error, lastUpdated, refetch } = useMarketData('SPY');
+
+// data.gex: GEX data
+// data.gammaFlip: Gamma flip warnings
+// data.greeks.items: Array de Greeks
+// data.walls.items: Options walls
+// data.volumeOI.items: Volume & OI
+```
+
+El hook implementa:
+- Polling automático cada 10 segundos
+- Rate limiting (200ms entre requests)
+- Manejo de errores con reintentos
+- Estados de loading y error
+
+### Testing
+
+```bash
+# Test API directamente
+curl http://localhost:5001/api/market/data/SPY | jq
+
+# Frontend dev server (con proxy automático)
+npm run dev
+# Navega a http://localhost:3000
+# Abre Trade Journal → Tab "📊 Market Data"
+```
 
 ## 🆘 Troubleshooting
 

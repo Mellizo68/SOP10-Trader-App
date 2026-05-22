@@ -1,33 +1,54 @@
-import { Request, Response, NextFunction } from 'express'
+import { Request, Response, NextFunction } from 'express';
+import logger from '../utils/logger.js';
 
+/**
+ * Custom API Error Class
+ */
 export class ApiError extends Error {
   constructor(
-    public statusCode: number,
+    public status: number,
     message: string
   ) {
-    super(message)
-    this.name = 'ApiError'
+    super(message);
+    Object.setPrototypeOf(this, ApiError.prototype);
   }
 }
 
+/**
+ * Global Error Handler Middleware
+ */
 export const errorHandler = (
-  err: Error,
-  _req: Request,
+  err: any,
+  req: Request,
   res: Response,
-  _next: NextFunction
-): void => {
-  console.error('Error:', err)
+  next: NextFunction
+) => {
+  const statusCode = err.status || err.statusCode || 500;
+  const message = err.message || 'Internal server error';
 
-  if (err instanceof ApiError) {
-    res.status(err.statusCode).json({
-      success: false,
-      error: err.message
-    })
-    return
+  // Log error with appropriate level
+  if (statusCode >= 500) {
+    logger.error('Server error', {
+      correlationId: req.id,
+      status: statusCode,
+      message,
+      path: req.path,
+      method: req.method,
+      stack: err.stack,
+    });
+  } else {
+    logger.warn('Client error', {
+      correlationId: req.id,
+      status: statusCode,
+      message,
+      path: req.path,
+      method: req.method,
+    });
   }
 
-  res.status(500).json({
+  res.status(statusCode).json({
     success: false,
-    error: 'Internal server error'
-  })
-}
+    error: message,
+    ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
+  });
+};

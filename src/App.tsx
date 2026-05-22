@@ -3,6 +3,7 @@ import SetupValidator from './components/SetupValidator'
 import ExitCalculator from './components/ExitCalculator'
 import ImageExtractor from './components/ImageExtractor'
 import TradeJournal from './components/TradeJournal'
+import { OfflineIndicator } from './components/OfflineIndicator'
 import { SetupValidation, ValidationResult } from './types'
 import { TradeJournalService } from './services/tradeJournalService'
 import './styles/App.css'
@@ -52,6 +53,7 @@ function App() {
 
   return (
     <div className="min-h-screen bg-slate-950">
+      <OfflineIndicator />
       {/* Module Selector */}
       <div className="bg-slate-900 border-b border-slate-800 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 py-4 flex gap-4">

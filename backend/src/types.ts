@@ -1,98 +1,96 @@
-// Mirror of frontend TradeEntry type
+/**
+ * Trade Entry Type
+ */
 export interface TradeEntry {
-  id: string
-  entryNumber: number
-  dateEntry: Date
-  symbol: string
-  strategy: string
-  strikePrice: number
-  delta: number
-  daysToExpiration: number
-  ivPercent: number
-  gexStatus: 'positivo' | 'negativo'
-  pvpStatus: string
-  vwapStatus: string
-  confluenceScore: number
-  entryPrice: number
-  takeProfit: number
-  stopLoss: number
-  status: 'open' | 'closed' | 'cancelled'
-  exitPrice?: number
-  exitDate?: Date
-  profitLoss?: number
-  percentReturn?: number
-  comments?: string
-  screenshots?: string[]
+  id: string;
+  entryNumber: number;
+  dateEntry: Date;
+  symbol: string;
+  strategy: string;
+  confluenceScore: number;
+  entryPrice: number;
+  targetEntry: number;
+  targetTP: number;
+  targetSL: number;
+  strikePrice?: number;
+  delta?: number;
+  daysToExpiration?: number;
+  ivPercent?: number;
+  gexStatus?: string;
+  pvpStatus?: string;
+  vwapStatus?: string;
+  takeProfit?: number;
+  stopLoss?: number;
+  status: 'open' | 'closed';
+  exitPrice?: number;
+  exitDate?: Date;
+  profitLoss?: number;
+  percentReturn?: number;
+  comments?: string;
+  screenshots?: string[];
 }
 
-// Filter interface for trade queries
-export interface TradeFilter {
-  status?: 'open' | 'closed' | 'cancelled'
-  strategy?: string
-  confluenceMin?: number
-  confluenceMax?: number
-  zScoreMin?: number
-  zScoreMax?: number
-  searchSymbol?: string
-  limit?: number
-  offset?: number
-}
-
-// API Response types
-export interface PaginatedResponse<T> {
-  data: T[]
-  total: number
-  page: number
-  pageSize: number
-}
-
-export interface ApiResponse<T> {
-  success: boolean
-  data?: T
-  error?: string
-}
-
-// Statistics interface
+/**
+ * Statistics Type
+ */
 export interface Statistics {
-  totalTrades: number
-  winningTrades: number
-  losingTrades: number
-  winRate: number
-  averageProfit: number
-  averageLoss: number
-  profitFactor: number
-  totalProfitLoss: number
-  bestTrade: number
-  worstTrade: number
-  byStrategy: Record<string, StrategyStats>
-  byConfluenceScore: ConfluenceStats
+  totalTrades: number;
+  openTrades: number;
+  closedTrades: number;
+  winRate: number;
+  profitFactor: number;
+  totalProfitLoss: number;
+  averageWin: number;
+  averageLoss: number;
+  bestTrade: number;
+  worstTrade: number;
+  byStrategy: Record<string, StrategyStats>;
+  byConfluence: ConfluenceStats;
 }
 
 export interface StrategyStats {
-  count: number
-  winRate: number
-  avgProfitLoss: number
+  count: number;
+  winRate: number;
+  averagePL: number;
 }
 
 export interface ConfluenceStats {
-  high: ConfluenceGroup
-  medium: ConfluenceGroup
-  low: ConfluenceGroup
+  high: { count: number; winRate: number; avgPL: number };
+  medium: { count: number; winRate: number; avgPL: number };
+  low: { count: number; winRate: number; avgPL: number };
 }
 
-export interface ConfluenceGroup {
-  winRate: number
-  avgProfit: number
+/**
+ * Market Data Types
+ */
+export interface MarketDataRequest {
+  symbol: string;
+  strike?: number;
+  expiration?: string;
 }
 
-// Sync related
-export interface SyncRequest {
-  trades: TradeEntry[]
-  clientId: string
+/**
+ * API Response Types
+ */
+export interface PaginatedResponse<T> {
+  success: boolean;
+  data: T[];
+  page: number;
+  limit: number;
+  total: number;
 }
 
-export interface SyncResponse {
-  synced: number
-  conflicts: number
-  errors: string[]
+/**
+ * Trade Filter Type
+ */
+export interface TradeFilter {
+  status?: 'open' | 'closed';
+  strategy?: string;
+  confluenceMin?: number;
+  confluenceMax?: number;
+  zScoreMin?: number;
+  zScoreMax?: number;
+  searchSymbol?: string;
+  startDate?: Date;
+  endDate?: Date;
 }

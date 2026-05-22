@@ -1,15 +1,18 @@
-import { Router, Request, Response } from 'express'
-import { StatsController } from '../controllers/statsController'
+import { Router, Request, Response } from 'express';
 
-const router = Router()
+const router = Router();
 
-// GET /api/stats - Get all statistics
-router.get('/', (req: Request, res: Response) => StatsController.getStatistics(req, res))
+/**
+ * Statistics Routes (Stub - Phase 5)
+ * Full implementation coming in Phase 5
+ */
 
-// GET /api/stats/by-strategy - Get statistics by strategy
-router.get('/by-strategy', (req: Request, res: Response) => StatsController.getStrategyStats(req, res))
+router.get('/', (req: Request, res: Response) => {
+  res.json({
+    success: true,
+    data: {},
+    message: 'Statistics endpoint - Phase 5 implementation',
+  });
+});
 
-// GET /api/stats/by-confluence - Get statistics by confluence
-router.get('/by-confluence', (req: Request, res: Response) => StatsController.getConfluenceStats(req, res))
-
-export default router
+export default router;

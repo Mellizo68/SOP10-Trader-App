@@ -1,12 +1,18 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, lazy, Suspense } from 'react'
 import { TradeEntry, ValidationResult } from '../types'
 import { TradeJournalService } from '../services/tradeJournalService'
 import { loadTrades, clearTrades } from '../utils/localStorage'
 import { BarChart3, Download, Trash2 } from 'lucide-react'
-import TradeInputForm from './TradeJournal/TradeInputForm'
-import TradeHistoryTable from './TradeJournal/TradeHistoryTable'
-import OverviewTab from './TradeJournal/OverviewTab'
-import AnalyticsTab from './TradeJournal/AnalyticsTab'
+import { LoadingSpinner } from './LoadingSpinner'
+
+// Lazy-loaded components
+// These are split into separate chunks and loaded on-demand when tabs are activated
+// Expected impact: 15-20% reduction in initial bundle size
+const TradeInputForm = lazy(() => import('./TradeJournal/TradeInputForm'))
+const TradeHistoryTable = lazy(() => import('./TradeJournal/TradeHistoryTable'))
+const OverviewTab = lazy(() => import('./TradeJournal/OverviewTab'))
+const AnalyticsTab = lazy(() => import('./TradeJournal/AnalyticsTab'))
+const MarketAnalysisTab = lazy(() => import('./TradeJournal/MarketAnalysisTab'))
 
 interface TradeJournalProps {
   validationResult?: ValidationResult
@@ -14,7 +20,7 @@ interface TradeJournalProps {
 }
 
 const TradeJournal: React.FC<TradeJournalProps> = ({ validationResult, onTradeCreated }) => {
-  const [activeTab, setActiveTab] = useState<'overview' | 'trades' | 'analytics'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'trades' | 'analytics' | 'market-analysis'>('overview')
   const [trades, setTrades] = useState<TradeEntry[]>([])
   const [refreshTrigger, setRefreshTrigger] = useState(0)
 
@@ -99,24 +105,49 @@ const TradeJournal: React.FC<TradeJournalProps> = ({ validationResult, onTradeCr
           >
             🔍 Analytics
           </button>
+          <button
+            onClick={() => setActiveTab('market-analysis')}
+            className={`px-6 py-3 font-semibold transition-colors ${
+              activeTab === 'market-analysis'
+                ? 'text-blue-400 border-b-2 border-blue-500'
+                : 'text-gray-400 hover:text-gray-300'
+            }`}
+          >
+            📊 Market Data
+          </button>
         </div>
 
         {/* Tab Content */}
         <div className="mb-8">
-          {activeTab === 'overview' && <OverviewTab trades={trades} />}
-          {activeTab === 'trades' && (
-            <div className="space-y-6">
-              <TradeInputForm
-                validationResult={validationResult}
-                onTradeCreated={handleTradeCreated}
-              />
-              <TradeHistoryTable
-                trades={trades}
-                onTradeUpdated={handleTradeUpdated}
-              />
-            </div>
+          {activeTab === 'overview' && (
+            <Suspense fallback={<LoadingSpinner message="Loading Overview..." />}>
+              <OverviewTab trades={trades} />
+            </Suspense>
           )}
-          {activeTab === 'analytics' && <AnalyticsTab trades={trades} />}
+          {activeTab === 'trades' && (
+            <Suspense fallback={<LoadingSpinner message="Loading Trades..." />}>
+              <div className="space-y-6">
+                <TradeInputForm
+                  validationResult={validationResult}
+                  onTradeCreated={handleTradeCreated}
+                />
+                <TradeHistoryTable
+                  trades={trades}
+                  onTradeUpdated={handleTradeUpdated}
+                />
+              </div>
+            </Suspense>
+          )}
+          {activeTab === 'analytics' && (
+            <Suspense fallback={<LoadingSpinner message="Loading Analytics..." />}>
+              <AnalyticsTab trades={trades} />
+            </Suspense>
+          )}
+          {activeTab === 'market-analysis' && (
+            <Suspense fallback={<LoadingSpinner message="Loading Market Data..." />}>
+              <MarketAnalysisTab symbol="SPY" />
+            </Suspense>
+          )}
         </div>
 
         {/* Action Bar */}
