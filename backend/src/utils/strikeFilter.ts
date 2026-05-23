@@ -1,4 +1,4 @@
-import { GreeksData, OptionsWallsData, VolumeOIData } from '../api/flashalpha-client.js';
+import { GreeksData, OptionsWallsData, VolumeOIData } from '../api/flashalpha-client';
 
 /**
  * Strike Range Filtering Utility

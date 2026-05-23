@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express'
 import { v4 as uuidv4 } from 'uuid'
-import logger from '../utils/logger.js'
-import { metrics } from '../utils/metrics.js'
+import logger from '../utils/logger'
+import { metrics } from '../utils/metrics'
 
 /**
  * Request Logger Middleware

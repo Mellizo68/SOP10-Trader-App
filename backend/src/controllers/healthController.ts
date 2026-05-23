@@ -1,6 +1,6 @@
 import { Request, Response } from 'express'
-import { metrics, MetricsData } from '../utils/metrics.js'
-import logger from '../utils/logger.js'
+import { metrics, MetricsData } from '../utils/metrics'
+import logger from '../utils/logger'
 
 export class HealthController {
   /**

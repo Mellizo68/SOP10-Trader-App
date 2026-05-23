@@ -1,6 +1,6 @@
 import axios, { AxiosInstance } from 'axios';
 import dotenv from 'dotenv';
-import logger from '../utils/logger.js';
+import logger from '../utils/logger';
 
 dotenv.config();
 

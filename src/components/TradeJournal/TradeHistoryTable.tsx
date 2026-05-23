@@ -24,7 +24,33 @@ const TradeHistoryTableComponent: React.FC<TradeHistoryTableProps> = ({ trades, 
   const [closeExitPrice, setCloseExitPrice] = useState<string>('')
 
   const filteredTrades = useMemo(() => {
-    let result = TradeJournalService.getFilteredTrades(filters)
+    // Start with trades prop (not from service)
+    let result = [...trades]
+
+    // Apply filters
+    if (filters.status) {
+      result = result.filter(t => t.status === filters.status)
+    }
+
+    if (filters.strategy) {
+      result = result.filter(t => t.strategy === filters.strategy)
+    }
+
+    if (filters.confluenceMin !== undefined) {
+      result = result.filter(t => t.confluenceScore >= filters.confluenceMin)
+    }
+
+    if (filters.confluenceMax !== undefined) {
+      result = result.filter(t => t.confluenceScore <= filters.confluenceMax)
+    }
+
+    if (filters.symbolSearch) {
+      const search = filters.symbolSearch.toLowerCase()
+      result = result.filter(t =>
+        t.symbol.toLowerCase().includes(search) ||
+        t.strategy.toLowerCase().includes(search)
+      )
+    }
 
     // Sorting
     result.sort((a, b) => {
@@ -124,8 +150,9 @@ const TradeHistoryTableComponent: React.FC<TradeHistoryTableProps> = ({ trades, 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 pb-6 border-b border-gray-700">
         {/* Status Filter */}
         <div>
-          <label className="text-gray-400 text-sm block mb-2">Status</label>
+          <label htmlFor="filterStatus" className="text-gray-400 text-sm block mb-2">Status</label>
           <select
+            id="filterStatus"
             value={filters.status || ''}
             onChange={(e) => setFilters({ ...filters, status: (e.target.value as any) || undefined })}
             className="w-full bg-gray-700/50 border border-gray-600 rounded px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-500"
@@ -139,8 +166,9 @@ const TradeHistoryTableComponent: React.FC<TradeHistoryTableProps> = ({ trades, 
 
         {/* Strategy Filter */}
         <div>
-          <label className="text-gray-400 text-sm block mb-2">Strategy</label>
+          <label htmlFor="filterStrategy" className="text-gray-400 text-sm block mb-2">Strategy</label>
           <select
+            id="filterStrategy"
             value={filters.strategy || ''}
             onChange={(e) => setFilters({ ...filters, strategy: e.target.value || undefined })}
             className="w-full bg-gray-700/50 border border-gray-600 rounded px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-500"
@@ -154,8 +182,9 @@ const TradeHistoryTableComponent: React.FC<TradeHistoryTableProps> = ({ trades, 
 
         {/* Confluence Filter */}
         <div>
-          <label className="text-gray-400 text-sm block mb-2">Confluence</label>
+          <label htmlFor="filterConfluence" className="text-gray-400 text-sm block mb-2">Confluence</label>
           <select
+            id="filterConfluence"
             value={`${filters.confluenceMin || ''}-${filters.confluenceMax || ''}`}
             onChange={(e) => {
               const [min, max] = e.target.value.split('-')
@@ -176,8 +205,9 @@ const TradeHistoryTableComponent: React.FC<TradeHistoryTableProps> = ({ trades, 
 
         {/* Symbol Search */}
         <div>
-          <label className="text-gray-400 text-sm block mb-2">Symbol</label>
+          <label htmlFor="filterSymbol" className="text-gray-400 text-sm block mb-2">Symbol</label>
           <input
+            id="filterSymbol"
             type="text"
             value={filters.searchSymbol || ''}
             onChange={(e) => setFilters({ ...filters, searchSymbol: e.target.value || undefined })}

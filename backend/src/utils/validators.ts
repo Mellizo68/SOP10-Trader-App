@@ -1,4 +1,4 @@
-import { ApiError } from '../middleware/errorHandler.js';
+import { ApiError } from '../middleware/errorHandler';
 
 /**
  * Validators for Trade Management System

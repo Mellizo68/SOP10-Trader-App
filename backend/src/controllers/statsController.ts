@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { Statistics } from '../types.js';
+import { Statistics } from '../types';
 
 /**
  * Statistics Controller (Stub - Phase 5)

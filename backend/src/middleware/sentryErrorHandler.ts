@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express'
 import * as Sentry from '@sentry/node'
-import logger from '../utils/logger.js'
+import logger from '../utils/logger'
 
 /**
  * Sentry Error Handler Middleware

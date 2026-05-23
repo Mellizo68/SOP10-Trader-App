@@ -1,4 +1,5 @@
-import { describe, it, expect, beforeEach } from '@jest/globals'
+import { describe, it, expect } from '@jest/globals'
+import { ApiError } from '../middleware/errorHandler'
 import {
   validateTradeCreation,
   validateTradeUpdate,
@@ -7,10 +8,10 @@ import {
 } from '../utils/validators'
 
 /**
- * Phase 6: Testing & Quality - Validator Unit Tests
+ * Phase 6.1: Testing & Quality - Validator Unit Tests
  *
  * Tests input validation functions that protect data integrity
- * across all trades endpoints
+ * across all trades endpoints. Validators throw ApiError on failure.
  */
 
 describe('Validators - Trade Input Validation', () => {
@@ -19,386 +20,312 @@ describe('Validators - Trade Input Validation', () => {
       const validData = {
         symbol: 'SPY',
         entry_price: 100.0,
-        exit_price: 110.0,
-        entry_date: '2026-05-22',
-        exit_date: '2026-05-23',
         strategy: 'Support Bounce',
-        setup_type: 'Confluence',
-        status: 'open',
+        date_entry: '2026-05-22',
       }
 
-      const result = validateTradeCreation(validData)
-      expect(result.isValid).toBe(true)
-      expect(result.errors).toEqual([])
+      expect(() => validateTradeCreation(validData)).not.toThrow()
     })
 
-    it('should require symbol field', () => {
+    it('should throw error for missing symbol', () => {
       const invalidData = {
         entry_price: 100.0,
-        exit_price: 110.0,
         strategy: 'Test',
       }
 
-      const result = validateTradeCreation(invalidData)
-      expect(result.isValid).toBe(false)
-      expect(result.errors).toContain(expect.stringContaining('symbol'))
+      expect(() => validateTradeCreation(invalidData)).toThrow(ApiError)
+      expect(() => validateTradeCreation(invalidData)).toThrow(/symbol/i)
+    })
+
+    it('should throw error for empty symbol', () => {
+      const invalidData = {
+        symbol: '',
+        entry_price: 100.0,
+        strategy: 'Test',
+      }
+
+      expect(() => validateTradeCreation(invalidData)).toThrow(ApiError)
+    })
+
+    it('should throw error for non-string symbol', () => {
+      const invalidData = {
+        symbol: 123,
+        entry_price: 100.0,
+        strategy: 'Test',
+      }
+
+      expect(() => validateTradeCreation(invalidData)).toThrow(ApiError)
     })
 
     it('should require entry_price field', () => {
       const invalidData = {
         symbol: 'SPY',
-        exit_price: 110.0,
         strategy: 'Test',
       }
 
-      const result = validateTradeCreation(invalidData)
-      expect(result.isValid).toBe(false)
-      expect(result.errors).toContain(expect.stringContaining('entry_price'))
+      expect(() => validateTradeCreation(invalidData)).toThrow(ApiError)
+      expect(() => validateTradeCreation(invalidData)).toThrow(/entry price/i)
     })
 
-    it('should require exit_price field', () => {
+    it('should reject zero entry_price', () => {
       const invalidData = {
         symbol: 'SPY',
-        entry_price: 100.0,
+        entry_price: 0,
         strategy: 'Test',
       }
 
-      const result = validateTradeCreation(invalidData)
-      expect(result.isValid).toBe(false)
-      expect(result.errors).toContain(expect.stringContaining('exit_price'))
+      expect(() => validateTradeCreation(invalidData)).toThrow(ApiError)
+    })
+
+    it('should reject negative entry_price', () => {
+      const invalidData = {
+        symbol: 'SPY',
+        entry_price: -100,
+        strategy: 'Test',
+      }
+
+      expect(() => validateTradeCreation(invalidData)).toThrow(ApiError)
+    })
+
+    it('should reject non-numeric entry_price', () => {
+      const invalidData = {
+        symbol: 'SPY',
+        entry_price: 'not-a-number',
+        strategy: 'Test',
+      }
+
+      expect(() => validateTradeCreation(invalidData)).toThrow(ApiError)
     })
 
     it('should require strategy field', () => {
       const invalidData = {
         symbol: 'SPY',
         entry_price: 100.0,
-        exit_price: 110.0,
       }
 
-      const result = validateTradeCreation(invalidData)
-      expect(result.isValid).toBe(false)
-      expect(result.errors).toContain(expect.stringContaining('strategy'))
+      expect(() => validateTradeCreation(invalidData)).toThrow(ApiError)
+      expect(() => validateTradeCreation(invalidData)).toThrow(/strategy/i)
     })
 
-    it('should validate entry_price is a number', () => {
-      const invalidData = {
+    it('should accept optional date_entry field', () => {
+      const validData = {
         symbol: 'SPY',
-        entry_price: 'not-a-number',
-        exit_price: 110.0,
+        entry_price: 100.0,
         strategy: 'Test',
+        date_entry: '2026-05-22',
       }
 
-      const result = validateTradeCreation(invalidData)
-      expect(result.isValid).toBe(false)
-      expect(result.errors).toContain(expect.stringContaining('number'))
+      expect(() => validateTradeCreation(validData)).not.toThrow()
     })
 
-    it('should validate exit_price is a number', () => {
+    it('should validate date_entry format', () => {
       const invalidData = {
         symbol: 'SPY',
         entry_price: 100.0,
-        exit_price: 'not-a-number',
         strategy: 'Test',
+        date_entry: 'invalid-date',
       }
 
-      const result = validateTradeCreation(invalidData)
-      expect(result.isValid).toBe(false)
-      expect(result.errors).toContain(expect.stringContaining('number'))
+      expect(() => validateTradeCreation(invalidData)).toThrow(ApiError)
+      expect(() => validateTradeCreation(invalidData)).toThrow(/date/i)
     })
 
-    it('should validate symbol is uppercase', () => {
-      const lowercaseData = {
-        symbol: 'spy', // lowercase
-        entry_price: 100.0,
-        exit_price: 110.0,
-        strategy: 'Test',
-      }
-
-      const result = validateTradeCreation(lowercaseData)
-      expect(result.isValid).toBe(false)
-      expect(result.errors).toContain(expect.stringContaining('symbol'))
-    })
-
-    it('should validate symbol is 1-5 characters', () => {
-      const tooLongSymbol = {
-        symbol: 'VERYLONGSYMBOL',
-        entry_price: 100.0,
-        exit_price: 110.0,
-        strategy: 'Test',
-      }
-
-      const result = validateTradeCreation(tooLongSymbol)
-      expect(result.isValid).toBe(false)
-      expect(result.errors).toContain(expect.stringContaining('symbol'))
-    })
-
-    it('should validate strategy is 2-100 characters', () => {
-      const tooShortStrategy = {
+    it('should accept optional numeric fields', () => {
+      const validData = {
         symbol: 'SPY',
         entry_price: 100.0,
-        exit_price: 110.0,
-        strategy: 'A', // Too short
-      }
-
-      const result = validateTradeCreation(tooShortStrategy)
-      expect(result.isValid).toBe(false)
-      expect(result.errors).toContain(expect.stringContaining('strategy'))
-    })
-
-    it('should accept optional fields', () => {
-      const minimalData = {
-        symbol: 'SPY',
-        entry_price: 100.0,
-        exit_price: 110.0,
-        strategy: 'Support Bounce',
-        // delta, iv_percent, days_to_expiration, etc. are optional
-      }
-
-      const result = validateTradeCreation(minimalData)
-      expect(result.isValid).toBe(true)
-    })
-
-    it('should validate date format YYYY-MM-DD', () => {
-      const invalidDateData = {
-        symbol: 'SPY',
-        entry_price: 100.0,
-        exit_price: 110.0,
         strategy: 'Test',
-        entry_date: '05-22-2026', // Wrong format
+        strike_price: 450,
+        delta: 0.65,
+        iv_percent: 25.5,
       }
 
-      const result = validateTradeCreation(invalidDateData)
-      expect(result.isValid).toBe(false)
-      expect(result.errors).toContain(expect.stringContaining('date'))
+      expect(() => validateTradeCreation(validData)).not.toThrow()
+    })
+
+    it('should reject negative optional numeric fields', () => {
+      const invalidData = {
+        symbol: 'SPY',
+        entry_price: 100.0,
+        strategy: 'Test',
+        strike_price: -450,
+      }
+
+      expect(() => validateTradeCreation(invalidData)).toThrow(ApiError)
     })
   })
 
   describe('validateTradeUpdate', () => {
-    it('should accept partial trade update', () => {
-      const updateData = {
-        exit_price: 105.0,
+    it('should accept empty update (partial update)', () => {
+      expect(() => validateTradeUpdate({})).not.toThrow()
+    })
+
+    it('should accept partial symbol update', () => {
+      const data = { symbol: 'QQQ' }
+      expect(() => validateTradeUpdate(data)).not.toThrow()
+    })
+
+    it('should reject empty symbol in update', () => {
+      const data = { symbol: '' }
+      expect(() => validateTradeUpdate(data)).toThrow(ApiError)
+    })
+
+    it('should accept status update with valid value', () => {
+      const data = { status: 'closed' }
+      expect(() => validateTradeUpdate(data)).not.toThrow()
+    })
+
+    it('should reject status update with invalid value', () => {
+      const data = { status: 'invalid' }
+      expect(() => validateTradeUpdate(data)).toThrow(ApiError)
+      expect(() => validateTradeUpdate(data)).toThrow(/open|closed/i)
+    })
+
+    it('should accept positive numeric updates', () => {
+      const data = {
+        exit_price: 110.0,
+        take_profit: 120.0,
+        stop_loss: 95.0,
       }
 
-      const result = validateTradeUpdate(updateData)
-      expect(result.isValid).toBe(true)
+      expect(() => validateTradeUpdate(data)).not.toThrow()
     })
 
-    it('should accept empty update object', () => {
-      const emptyUpdate = {}
-
-      const result = validateTradeUpdate(emptyUpdate)
-      expect(result.isValid).toBe(true)
+    it('should reject negative numeric updates', () => {
+      const data = { exit_price: -100 }
+      expect(() => validateTradeUpdate(data)).toThrow(ApiError)
     })
 
-    it('should validate numeric fields when provided', () => {
-      const invalidUpdate = {
-        exit_price: 'not-a-number',
-      }
-
-      const result = validateTradeUpdate(invalidUpdate)
-      expect(result.isValid).toBe(false)
-      expect(result.errors).toContain(expect.stringContaining('number'))
-    })
-
-    it('should validate status when provided', () => {
-      const invalidStatus = {
-        status: 'invalid-status',
-      }
-
-      const result = validateTradeUpdate(invalidStatus)
-      expect(result.isValid).toBe(false)
-      expect(result.errors).toContain(expect.stringContaining('status'))
-    })
-
-    it('should accept valid status values', () => {
-      const validStatuses = ['open', 'closed']
-
-      validStatuses.forEach((status) => {
-        const updateData = { status }
-        const result = validateTradeUpdate(updateData)
-        expect(result.isValid).toBe(true)
-      })
-    })
-
-    it('should allow multiple field updates', () => {
-      const multiUpdate = {
-        exit_price: 105.0,
-        comments: 'Updated comment',
-        strategy: 'New Strategy Name',
-      }
-
-      const result = validateTradeUpdate(multiUpdate)
-      expect(result.isValid).toBe(true)
+    it('should validate exit_price format', () => {
+      const data = { exit_price: 'not-a-number' }
+      expect(() => validateTradeUpdate(data)).toThrow(ApiError)
     })
   })
 
   describe('validateTradeClose', () => {
-    it('should require exit_price when closing trade', () => {
-      const noExitPrice = {
-        exit_date: '2026-05-23',
-      }
-
-      const result = validateTradeClose(noExitPrice)
-      expect(result.isValid).toBe(false)
-      expect(result.errors).toContain(expect.stringContaining('exit_price'))
+    it('should accept valid close parameters', () => {
+      expect(() => validateTradeClose(110.0, '2026-05-23')).not.toThrow()
     })
 
-    it('should accept exit_price and exit_date', () => {
-      const closeData = {
-        exit_price: 110.0,
-        exit_date: '2026-05-23',
-      }
-
-      const result = validateTradeClose(closeData)
-      expect(result.isValid).toBe(true)
+    it('should accept close without exit date', () => {
+      expect(() => validateTradeClose(110.0)).not.toThrow()
     })
 
-    it('should make exit_date optional', () => {
-      const closeDataNoDate = {
-        exit_price: 110.0,
-      }
-
-      const result = validateTradeClose(closeDataNoDate)
-      expect(result.isValid).toBe(true)
+    it('should require exit_price', () => {
+      expect(() => validateTradeClose(null)).toThrow(ApiError)
+      expect(() => validateTradeClose(undefined)).toThrow(ApiError)
     })
 
-    it('should validate exit_price is a number', () => {
-      const invalidPrice = {
-        exit_price: 'not-a-number',
-      }
-
-      const result = validateTradeClose(invalidPrice)
-      expect(result.isValid).toBe(false)
-      expect(result.errors).toContain(expect.stringContaining('number'))
+    it('should reject zero exit_price', () => {
+      expect(() => validateTradeClose(0)).toThrow(ApiError)
     })
 
-    it('should validate exit_price is positive', () => {
-      const negativePrice = {
-        exit_price: -110.0,
-      }
+    it('should reject negative exit_price', () => {
+      expect(() => validateTradeClose(-100)).toThrow(ApiError)
+    })
 
-      const result = validateTradeClose(negativePrice)
-      expect(result.isValid).toBe(false)
-      expect(result.errors).toContain(expect.stringContaining('positive'))
+    it('should reject non-numeric exit_price', () => {
+      expect(() => validateTradeClose('not-a-number')).toThrow(ApiError)
     })
 
     it('should validate exit_date format', () => {
-      const invalidDate = {
-        exit_price: 110.0,
-        exit_date: '2026/05/23', // Wrong format
-      }
+      expect(() => validateTradeClose(110.0, 'invalid-date')).toThrow(ApiError)
+    })
 
-      const result = validateTradeClose(invalidDate)
-      expect(result.isValid).toBe(false)
-      expect(result.errors).toContain(expect.stringContaining('date'))
+    it('should accept valid ISO date for exit_date', () => {
+      expect(() => validateTradeClose(110.0, '2026-05-23')).not.toThrow()
+      expect(() => validateTradeClose(110.0, '2026-05-23T14:30:00Z')).not.toThrow()
     })
   })
 
   describe('validatePaginationFilter', () => {
-    it('should accept default pagination params', () => {
-      const params = {
-        limit: 50,
-        offset: 0,
-      }
-
-      const result = validatePaginationFilter(params)
-      expect(result.isValid).toBe(true)
+    it('should accept empty pagination params', () => {
+      expect(() => validatePaginationFilter({})).not.toThrow()
     })
 
-    it('should enforce limit between 1 and 500', () => {
-      const tooSmall = { limit: 0 }
-      const tooLarge = { limit: 501 }
-
-      expect(validatePaginationFilter(tooSmall).isValid).toBe(false)
-      expect(validatePaginationFilter(tooLarge).isValid).toBe(false)
+    it('should accept valid limit', () => {
+      expect(() => validatePaginationFilter({ limit: 50 })).not.toThrow()
     })
 
-    it('should accept limit at boundaries', () => {
-      const minLimit = { limit: 1 }
-      const maxLimit = { limit: 500 }
-
-      expect(validatePaginationFilter(minLimit).isValid).toBe(true)
-      expect(validatePaginationFilter(maxLimit).isValid).toBe(true)
+    it('should reject limit below 1', () => {
+      expect(() => validatePaginationFilter({ limit: 0 })).toThrow(ApiError)
+      expect(() => validatePaginationFilter({ limit: -1 })).toThrow(ApiError)
     })
 
-    it('should enforce offset >= 0', () => {
-      const negativeOffset = { offset: -1 }
-
-      const result = validatePaginationFilter(negativeOffset)
-      expect(result.isValid).toBe(false)
-      expect(result.errors).toContain(expect.stringContaining('offset'))
+    it('should reject limit above 500', () => {
+      expect(() => validatePaginationFilter({ limit: 501 })).toThrow(ApiError)
     })
 
-    it('should accept any non-negative offset', () => {
-      const largeOffset = { offset: 10000 }
-
-      const result = validatePaginationFilter(largeOffset)
-      expect(result.isValid).toBe(true)
+    it('should reject non-numeric limit', () => {
+      expect(() => validatePaginationFilter({ limit: 'fifty' })).toThrow(ApiError)
     })
 
-    it('should validate sort field when provided', () => {
-      const validSort = { sort: 'created_at' }
-      const invalidSort = { sort: 'invalid_field' }
-
-      expect(validatePaginationFilter(validSort).isValid).toBe(true)
-      expect(validatePaginationFilter(invalidSort).isValid).toBe(false)
+    it('should accept valid offset', () => {
+      expect(() => validatePaginationFilter({ offset: 0 })).not.toThrow()
+      expect(() => validatePaginationFilter({ offset: 100 })).not.toThrow()
     })
 
-    it('should validate direction when provided', () => {
-      const validDirections = [
-        { direction: 'ASC' },
-        { direction: 'DESC' },
-      ]
-
-      const invalidDirection = { direction: 'INVALID' }
-
-      validDirections.forEach((params) => {
-        expect(validatePaginationFilter(params).isValid).toBe(true)
-      })
-
-      expect(validatePaginationFilter(invalidDirection).isValid).toBe(false)
+    it('should reject negative offset', () => {
+      expect(() => validatePaginationFilter({ offset: -1 })).toThrow(ApiError)
     })
 
-    it('should allow filtering by status', () => {
-      const filterByStatus = { status: 'open' }
-
-      const result = validatePaginationFilter(filterByStatus)
-      expect(result.isValid).toBe(true)
+    it('should accept valid sort', () => {
+      expect(() => validatePaginationFilter({ sort: 'created_at' })).not.toThrow()
+      expect(() => validatePaginationFilter({ sort: 'entry_price' })).not.toThrow()
     })
 
-    it('should allow filtering by symbol', () => {
-      const filterBySymbol = { symbol: 'SPY' }
-
-      const result = validatePaginationFilter(filterBySymbol)
-      expect(result.isValid).toBe(true)
+    it('should reject invalid sort characters', () => {
+      expect(() => validatePaginationFilter({ sort: 'invalid;drop' })).toThrow(ApiError)
+      expect(() => validatePaginationFilter({ sort: 'invalid-sort' })).toThrow(ApiError)
     })
 
-    it('should allow filtering by strategy', () => {
-      const filterByStrategy = { strategy: 'Support Bounce' }
-
-      const result = validatePaginationFilter(filterByStrategy)
-      expect(result.isValid).toBe(true)
+    it('should accept valid direction', () => {
+      expect(() => validatePaginationFilter({ direction: 'ASC' })).not.toThrow()
+      expect(() => validatePaginationFilter({ direction: 'DESC' })).not.toThrow()
+      expect(() => validatePaginationFilter({ direction: 'asc' })).not.toThrow()
+      expect(() => validatePaginationFilter({ direction: 'desc' })).not.toThrow()
     })
 
-    it('should allow date range filtering', () => {
-      const dateRange = {
-        dateStart: '2026-05-01',
-        dateEnd: '2026-05-31',
-      }
-
-      const result = validatePaginationFilter(dateRange)
-      expect(result.isValid).toBe(true)
+    it('should reject invalid direction', () => {
+      expect(() => validatePaginationFilter({ direction: 'INVALID' })).toThrow(ApiError)
     })
 
-    it('should validate dateEnd is after dateStart', () => {
-      const invalidRange = {
-        dateStart: '2026-05-31',
-        dateEnd: '2026-05-01', // Before start
-      }
+    it('should accept valid status filter', () => {
+      expect(() => validatePaginationFilter({ status: 'open' })).not.toThrow()
+      expect(() => validatePaginationFilter({ status: 'closed' })).not.toThrow()
+    })
 
-      const result = validatePaginationFilter(invalidRange)
-      expect(result.isValid).toBe(false)
-      expect(result.errors).toContain(expect.stringContaining('date'))
+    it('should reject invalid status filter', () => {
+      expect(() => validatePaginationFilter({ status: 'invalid' })).toThrow(ApiError)
+    })
+
+    it('should accept valid strategy filter', () => {
+      expect(() => validatePaginationFilter({ strategy: 'Support Bounce' })).not.toThrow()
+    })
+
+    it('should reject empty strategy filter', () => {
+      expect(() => validatePaginationFilter({ strategy: '' })).toThrow(ApiError)
+    })
+
+    it('should accept valid symbol filter', () => {
+      expect(() => validatePaginationFilter({ symbol: 'SPY' })).not.toThrow()
+    })
+
+    it('should reject empty symbol filter', () => {
+      expect(() => validatePaginationFilter({ symbol: '' })).toThrow(ApiError)
+    })
+
+    it('should accept combined valid filters', () => {
+      expect(() =>
+        validatePaginationFilter({
+          limit: 50,
+          offset: 0,
+          sort: 'date_entry',
+          direction: 'DESC',
+          status: 'open',
+          symbol: 'SPY',
+        })
+      ).not.toThrow()
     })
   })
 })

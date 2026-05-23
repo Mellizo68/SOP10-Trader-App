@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import logger from '../utils/logger.js';
+import logger from '../utils/logger';
 import {
   queryGetAllTrades,
   queryGetTradeById,
@@ -9,14 +9,14 @@ import {
   queryCloseTrade,
   queryGetTradeCount,
   Trade,
-} from '../db/queries/tradesQueries.js';
+} from '../db/queries/tradesQueries';
 import {
   validateTradeCreation,
   validateTradeUpdate,
   validateTradeClose,
   validatePaginationFilter,
-} from '../utils/validators.js';
-import { ApiError } from '../middleware/errorHandler.js';
+} from '../utils/validators';
+import { ApiError } from '../middleware/errorHandler';
 
 /**
  * Trades Controller - Phase 5 Complete Implementation

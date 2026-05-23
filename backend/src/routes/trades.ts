@@ -6,7 +6,7 @@ import {
   updateTrade,
   deleteTrade,
   closeTrade,
-} from '../controllers/tradesController.js';
+} from '../controllers/tradesController';
 
 const router = Router();
 

@@ -138,8 +138,9 @@ const TradeInputForm: React.FC<TradeInputFormProps> = ({ validationResult, onTra
         {/* Fila 1: Symbol, Strategy, Strike */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
-            <label className="block text-gray-300 text-sm font-semibold mb-2">Symbol *</label>
+            <label htmlFor="symbol" className="block text-gray-300 text-sm font-semibold mb-2">Symbol *</label>
             <input
+              id="symbol"
               type="text"
               name="symbol"
               value={formData.symbol}
@@ -150,8 +151,9 @@ const TradeInputForm: React.FC<TradeInputFormProps> = ({ validationResult, onTra
           </div>
 
           <div>
-            <label className="block text-gray-300 text-sm font-semibold mb-2">Strategy *</label>
+            <label htmlFor="strategy" className="block text-gray-300 text-sm font-semibold mb-2">Strategy *</label>
             <select
+              id="strategy"
               name="strategy"
               value={formData.strategy}
               onChange={handleChange}
@@ -175,8 +177,9 @@ const TradeInputForm: React.FC<TradeInputFormProps> = ({ validationResult, onTra
           </div>
 
           <div>
-            <label className="block text-gray-300 text-sm font-semibold mb-2">Strike Price</label>
+            <label htmlFor="strikePrice" className="block text-gray-300 text-sm font-semibold mb-2">Strike Price</label>
             <input
+              id="strikePrice"
               type="number"
               name="strikePrice"
               value={formData.strikePrice}
@@ -191,8 +194,9 @@ const TradeInputForm: React.FC<TradeInputFormProps> = ({ validationResult, onTra
         {/* Fila 2: Delta, DTE, IV */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
-            <label className="block text-gray-300 text-sm font-semibold mb-2">Delta</label>
+            <label htmlFor="delta" className="block text-gray-300 text-sm font-semibold mb-2">Delta</label>
             <input
+              id="delta"
               type="number"
               name="delta"
               value={formData.delta}
@@ -204,8 +208,9 @@ const TradeInputForm: React.FC<TradeInputFormProps> = ({ validationResult, onTra
           </div>
 
           <div>
-            <label className="block text-gray-300 text-sm font-semibold mb-2">Days to Exp.</label>
+            <label htmlFor="daysToExpiration" className="block text-gray-300 text-sm font-semibold mb-2">Days to Exp.</label>
             <input
+              id="daysToExpiration"
               type="number"
               name="daysToExpiration"
               value={formData.daysToExpiration}
@@ -216,8 +221,9 @@ const TradeInputForm: React.FC<TradeInputFormProps> = ({ validationResult, onTra
           </div>
 
           <div>
-            <label className="block text-gray-300 text-sm font-semibold mb-2">IV Percent</label>
+            <label htmlFor="ivPercent" className="block text-gray-300 text-sm font-semibold mb-2">IV Percent</label>
             <input
+              id="ivPercent"
               type="number"
               name="ivPercent"
               value={formData.ivPercent}
@@ -232,8 +238,9 @@ const TradeInputForm: React.FC<TradeInputFormProps> = ({ validationResult, onTra
         {/* Fila 3: Confluence, Entry, TP, SL */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div>
-            <label className="block text-gray-300 text-sm font-semibold mb-2">Confluence Score</label>
+            <label htmlFor="confluenceScore" className="block text-gray-300 text-sm font-semibold mb-2">Confluence Score</label>
             <input
+              id="confluenceScore"
               type="number"
               name="confluenceScore"
               value={formData.confluenceScore}
@@ -246,8 +253,9 @@ const TradeInputForm: React.FC<TradeInputFormProps> = ({ validationResult, onTra
           </div>
 
           <div>
-            <label className="block text-gray-300 text-sm font-semibold mb-2">Entry Price *</label>
+            <label htmlFor="entryPrice" className="block text-gray-300 text-sm font-semibold mb-2">Entry Price *</label>
             <input
+              id="entryPrice"
               type="number"
               name="entryPrice"
               value={formData.entryPrice}
@@ -259,8 +267,9 @@ const TradeInputForm: React.FC<TradeInputFormProps> = ({ validationResult, onTra
           </div>
 
           <div>
-            <label className="block text-gray-300 text-sm font-semibold mb-2">Take Profit</label>
+            <label htmlFor="takeProfit" className="block text-gray-300 text-sm font-semibold mb-2">Take Profit</label>
             <input
+              id="takeProfit"
               type="number"
               name="takeProfit"
               value={formData.takeProfit}
@@ -272,8 +281,9 @@ const TradeInputForm: React.FC<TradeInputFormProps> = ({ validationResult, onTra
           </div>
 
           <div>
-            <label className="block text-gray-300 text-sm font-semibold mb-2">Stop Loss</label>
+            <label htmlFor="stopLoss" className="block text-gray-300 text-sm font-semibold mb-2">Stop Loss</label>
             <input
+              id="stopLoss"
               type="number"
               name="stopLoss"
               value={formData.stopLoss}
@@ -288,8 +298,9 @@ const TradeInputForm: React.FC<TradeInputFormProps> = ({ validationResult, onTra
         {/* Fila 4: Status fields */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
-            <label className="block text-gray-300 text-sm font-semibold mb-2">GEX Status</label>
+            <label htmlFor="gexStatus" className="block text-gray-300 text-sm font-semibold mb-2">GEX Status</label>
             <select
+              id="gexStatus"
               name="gexStatus"
               value={formData.gexStatus}
               onChange={handleChange}
@@ -301,8 +312,9 @@ const TradeInputForm: React.FC<TradeInputFormProps> = ({ validationResult, onTra
           </div>
 
           <div>
-            <label className="block text-gray-300 text-sm font-semibold mb-2">PVP Status</label>
+            <label htmlFor="pvpStatus" className="block text-gray-300 text-sm font-semibold mb-2">PVP Status</label>
             <input
+              id="pvpStatus"
               type="text"
               name="pvpStatus"
               value={formData.pvpStatus}
@@ -313,8 +325,9 @@ const TradeInputForm: React.FC<TradeInputFormProps> = ({ validationResult, onTra
           </div>
 
           <div>
-            <label className="block text-gray-300 text-sm font-semibold mb-2">VWAP Status</label>
+            <label htmlFor="vwapStatus" className="block text-gray-300 text-sm font-semibold mb-2">VWAP Status</label>
             <input
+              id="vwapStatus"
               type="text"
               name="vwapStatus"
               value={formData.vwapStatus}
@@ -327,8 +340,9 @@ const TradeInputForm: React.FC<TradeInputFormProps> = ({ validationResult, onTra
 
         {/* Comments */}
         <div>
-          <label className="block text-gray-300 text-sm font-semibold mb-2">Comments</label>
+          <label htmlFor="comments" className="block text-gray-300 text-sm font-semibold mb-2">Comments</label>
           <textarea
+            id="comments"
             name="comments"
             value={formData.comments}
             onChange={handleChange}

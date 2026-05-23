@@ -1,4 +1,4 @@
-import { TradeEntry } from '../types.js';
+import { TradeEntry } from '../types';
 
 /**
  * Database Utils (Stub - Phase 5)

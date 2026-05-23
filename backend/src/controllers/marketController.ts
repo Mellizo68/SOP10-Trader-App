@@ -1,9 +1,9 @@
 import { Request, Response } from 'express';
-import { flashAlphaClient, GEXData, GreeksData, GammaFlipData, OptionsWallsData, VolumeOIData } from '../api/flashalpha-client.js';
-import logger from '../utils/logger.js';
-import { cache } from '../utils/cache.js';
-//import { dedup } from '../utils/requestDedup.js';// import { dedup } from '../utils/requestDedup.js';
-import { parseStrikeFilter, filterGreeks, filterWalls, filterVolumeOI } from '../utils/strikeFilter.js';
+import { flashAlphaClient, GEXData, GreeksData, GammaFlipData, OptionsWallsData, VolumeOIData } from '../api/flashalpha-client';
+import logger from '../utils/logger';
+import { cache } from '../utils/cache';
+//import { dedup } from '../utils/requestDedup';// import { dedup } from '../utils/requestDedup';
+import { parseStrikeFilter, filterGreeks, filterWalls, filterVolumeOI } from '../utils/strikeFilter';
 
 /**
  * Market Controller
@@ -36,7 +36,7 @@ export const getGEX = async (req: Request, res: Response) => {
     if (!gexData) {
       // Cache miss - fetch from API with deduplication
       const { dedup } = await import('../utils/requestDedup.js');
-      gexData = await dedup.execute(`gex:${cacheKey}`, async () => {// import { dedup } from '../utils/requestDedup.js';
+      gexData = await dedup.execute(`gex:${cacheKey}`, async () => {// import { dedup } from '../utils/requestDedup';
         return await flashAlphaClient.getGEX(
           upperSymbol,
           strike ? parseInt(strike as string) : undefined
@@ -479,8 +479,8 @@ export const getStats = async (req: Request, res: Response) => {
  * Get cache performance statistics
  */
 export const getCacheStats = async (req: Request, res: Response) => {
-    const { dedup } = await import('../utils/requestDedup.js');
   try {
+    const { dedup } = await import('../utils/requestDedup.js');
     const cacheStats = cache.getStats();
     const dedupStats = dedup.getStats();
 
@@ -488,7 +488,7 @@ export const getCacheStats = async (req: Request, res: Response) => {
       success: true,
       data: {
         cache: cacheStats,
-        deduplication: dedupStats,// import { dedup } from '../utils/requestDedup.js';
+        deduplication: dedupStats,// import { dedup } from '../utils/requestDedup';
         timestamp: new Date().toISOString(),
       },
     });

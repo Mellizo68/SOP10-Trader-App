@@ -10,7 +10,7 @@ import {
   getStats,
   getCacheStats,
   clearCache,
-} from '../controllers/marketController.js';
+} from '../controllers/marketController';
 
 const router = Router();
 

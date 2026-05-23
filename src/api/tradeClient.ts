@@ -211,6 +211,37 @@ export class TradeAPIClient {
   }
 
   /**
+   * DELETE /api/trades/:id
+   */
+  async deleteTrade(id: string): Promise<boolean> {
+    try {
+      const isOnline = await this.isOnline()
+
+      if (!isOnline) {
+        console.log('API offline - deleting trade locally')
+        return this.deleteTradeLocally(id)
+      }
+
+      const response = await fetch(`${this.baseURL}/trades/${id}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' }
+      })
+
+      if (!response.ok) return false
+
+      // Remove from cache
+      const trades = this.getTradesFromCache()
+      const filtered = trades.filter(t => t.id !== id)
+      this.updateTradeCache(filtered)
+
+      return true
+    } catch (error) {
+      console.error('Error deleting trade:', error)
+      return this.deleteTradeLocally(id)
+    }
+  }
+
+  /**
    * GET /api/stats
    */
   async getStatistics(): Promise<Statistics | null> {
@@ -371,6 +402,22 @@ export class TradeAPIClient {
     this.markTradeAsPending(id)
 
     return updatedTrade
+  }
+
+  private deleteTradeLocally(id: string): boolean {
+    const trades = this.getTradesFromCache()
+    const filtered = trades.filter(t => t.id !== id)
+
+    if (filtered.length === trades.length) {
+      return false // Trade not found
+    }
+
+    this.updateTradeCache(filtered)
+
+    // Mark as pending sync
+    this.markTradeAsPending(id)
+
+    return true
   }
 
   private calculateStatsLocally(): Statistics | null {

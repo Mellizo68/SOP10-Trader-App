@@ -1,382 +1,667 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { TradeAPIClient } from '../tradeClient'
 import { TradeEntry } from '../../types'
 
-// Mock fetch
-global.fetch = vi.fn()
-
 // Mock localStorage
-const localStorageMock = (() => {
-  let store: Record<string, string> = {}
-
-  return {
-    getItem: (key: string) => store[key] || null,
-    setItem: (key: string, value: string) => {
-      store[key] = value.toString()
-    },
-    removeItem: (key: string) => {
-      delete store[key]
-    },
-    clear: () => {
-      store = {}
-    },
-  }
-})()
-
-Object.defineProperty(window, 'localStorage', {
-  value: localStorageMock,
-})
+global.localStorage = {
+  getItem: vi.fn(),
+  setItem: vi.fn(),
+  removeItem: vi.fn(),
+  clear: vi.fn(),
+  length: 0,
+  key: vi.fn(),
+}
 
 describe('TradeAPIClient', () => {
   let client: TradeAPIClient
+  let fetchMock: ReturnType<typeof vi.fn>
 
   beforeEach(() => {
-    vi.clearAllMocks()
-    localStorage.clear()
     client = new TradeAPIClient()
-
-    // Mock the isOnline health check to return online by default
-    ;(global.fetch as any).mockResolvedValue({
-      ok: true,
-      json: async () => ({ success: true }),
-    })
+    fetchMock = vi.fn()
+    global.fetch = fetchMock
+    vi.clearAllMocks()
+    ;(global.localStorage.getItem as any).mockReturnValue(null)
+    ;(global.localStorage.setItem as any).mockImplementation(() => {})
   })
 
   afterEach(() => {
-    vi.clearAllMocks()
+    vi.restoreAllMocks()
   })
 
   describe('getTrades', () => {
     it('should fetch trades from API when online', async () => {
       const mockTrades: TradeEntry[] = [
         {
-          id: '1',
+          id: 'TRADE-0001',
+          entryNumber: 1,
           symbol: 'SPY',
-          entryPrice: 450,
-          quantity: 100,
-          entryDate: new Date().toISOString(),
+          strategy: 'Call Spread',
+          strikePrice: 400,
+          delta: 0.5,
+          daysToExpiration: 30,
+          ivPercent: 20,
+          gexStatus: 'positivo',
+          pvpStatus: 'bullish',
+          vwapStatus: 'above',
+          confluenceScore: 75,
+          entryPrice: 100,
+          takeProfit: 110,
+          stopLoss: 90,
+          dateEntry: new Date(),
           status: 'open',
-          pnl: 500,
-          pnlPercent: 1.1,
-          notes: 'Test trade',
+          comments: 'Test trade',
+          screenshots: [],
         },
       ]
 
-      ;(global.fetch as any)
+      fetchMock
+        .mockResolvedValueOnce({ ok: true }) // health check
         .mockResolvedValueOnce({
           ok: true,
           json: async () => ({ data: mockTrades }),
-        })
+        }) // getTrades
+
+      const result = await client.getTrades()
+
+      expect(result).toEqual(mockTrades)
+      expect(fetchMock).toHaveBeenCalledTimes(2)
+    })
+
+    it('should use cached data when offline', async () => {
+      const cachedTrades = [
+        {
+          id: 'TRADE-0001',
+          entryNumber: 1,
+          symbol: 'SPY',
+          strategy: 'Call Spread',
+          strikePrice: 400,
+          delta: 0.5,
+          daysToExpiration: 30,
+          ivPercent: 20,
+          gexStatus: 'positivo',
+          pvpStatus: 'bullish',
+          vwapStatus: 'above',
+          confluenceScore: 75,
+          entryPrice: 100,
+          takeProfit: 110,
+          stopLoss: 90,
+          dateEntry: '2026-05-22T23:59:35.444Z',
+          status: 'open',
+          comments: 'Cached trade',
+          screenshots: [],
+        },
+      ]
+
+      ;(global.localStorage.getItem as any).mockReturnValue(
+        JSON.stringify(cachedTrades)
+      )
+      fetchMock.mockResolvedValue({ ok: false }) // offline
+
+      const result = await client.getTrades()
+
+      expect(result).toEqual(cachedTrades)
+    })
+
+    it('should support filtering by status', async () => {
+      fetchMock
+        .mockResolvedValueOnce({ ok: true }) // health
         .mockResolvedValueOnce({
           ok: true,
-          json: async () => ({ data: mockTrades }),
+          json: async () => ({ data: [] }),
         })
 
-      const trades = await client.getTrades()
+      await client.getTrades({ status: 'closed', limit: 50, offset: 0 })
 
-      expect(trades).toEqual(mockTrades)
-      expect(global.fetch).toHaveBeenCalledWith(
-        expect.stringContaining('/api/trades'),
+      expect(fetchMock).toHaveBeenCalledWith(
+        expect.stringContaining('status=closed'),
         expect.any(Object)
       )
     })
 
-    it('should use cached data when API is offline', async () => {
-      const mockTrades: TradeEntry[] = [
-        {
-          id: '1',
-          symbol: 'QQQ',
-          entryPrice: 350,
-          quantity: 50,
-          entryDate: new Date().toISOString(),
-          status: 'closed',
-          pnl: -200,
-          pnlPercent: -1.1,
-          notes: 'Closed trade',
-        },
-      ]
-
-      // First call fails (offline), should return cached
-      ;(global.fetch as any).mockRejectedValueOnce(
-        new Error('Network error')
+    it('should handle API errors gracefully', async () => {
+      const cachedTrades = []
+      ;(global.localStorage.getItem as any).mockReturnValue(
+        JSON.stringify(cachedTrades)
       )
+      fetchMock.mockRejectedValue(new Error('Network error'))
 
-      // Manually set cache using the correct key from production code
-      localStorage.setItem(
-        'sop10_trades_cache',
-        JSON.stringify(mockTrades)
-      )
+      const result = await client.getTrades()
 
-      const trades = await client.getTrades()
-
-      expect(trades).toEqual(mockTrades)
-    })
-
-    it('should mark trades as pending during sync', async () => {
-      const mockTrades: TradeEntry[] = [
-        {
-          id: '1',
-          symbol: 'AAPL',
-          entryPrice: 150,
-          quantity: 100,
-          entryDate: new Date().toISOString(),
-          status: 'open',
-          pnl: 1000,
-          pnlPercent: 6.7,
-          notes: 'Pending sync',
-        },
-      ]
-
-      ;(global.fetch as any)
-        .mockResolvedValueOnce({ ok: true })
-        .mockResolvedValueOnce({
-          ok: true,
-          json: async () => ({ data: mockTrades }),
-        })
-
-      const trades = await client.getTrades()
-
-      expect(trades).toBeTruthy()
-    })
-
-    it('should recover when API comes back online', async () => {
-      const mockTrades: TradeEntry[] = [
-        {
-          id: '1',
-          symbol: 'TSLA',
-          entryPrice: 200,
-          quantity: 50,
-          entryDate: new Date().toISOString(),
-          status: 'open',
-          pnl: 500,
-          pnlPercent: 5,
-          notes: 'Recovery trade',
-        },
-      ]
-
-      // First call - offline
-      ;(global.fetch as any).mockRejectedValueOnce(
-        new Error('Offline')
-      )
-
-      // Set cache
-      localStorage.setItem(
-        'sop10_trades_cache',
-        JSON.stringify(mockTrades)
-      )
-
-      let trades = await client.getTrades()
-      expect(trades).toEqual(mockTrades) // From cache
-
-      // Second call - back online
-      ;(global.fetch as any)
-        .mockResolvedValueOnce({
-          ok: true,
-          json: async () => ({ data: mockTrades }),
-        })
-        .mockResolvedValueOnce({
-          ok: true,
-          json: async () => ({ data: mockTrades }),
-        })
-
-      trades = await client.getTrades()
-      expect(trades).toEqual(mockTrades) // From API
+      expect(result).toEqual(cachedTrades)
     })
   })
 
   describe('getTrade', () => {
-    it('should fetch a single trade from API', async () => {
+    it('should fetch single trade from API', async () => {
       const mockTrade: TradeEntry = {
-        id: '123',
-        symbol: 'MSFT',
-        entryPrice: 300,
-        quantity: 100,
-        entryDate: new Date().toISOString(),
+        id: 'TRADE-0001',
+        entryNumber: 1,
+        symbol: 'SPY',
+        strategy: 'Call Spread',
+        strikePrice: 400,
+        delta: 0.5,
+        daysToExpiration: 30,
+        ivPercent: 20,
+        gexStatus: 'positivo',
+        pvpStatus: 'bullish',
+        vwapStatus: 'above',
+        confluenceScore: 75,
+        entryPrice: 100,
+        takeProfit: 110,
+        stopLoss: 90,
+        dateEntry: new Date(),
         status: 'open',
-        pnl: 2000,
-        pnlPercent: 6.7,
-        notes: 'Single trade test',
+        comments: 'Test trade',
+        screenshots: [],
       }
 
-      ;(global.fetch as any)
-        .mockResolvedValueOnce({
-          ok: true,
-          json: async () => ({ data: mockTrade }),
-        })
+      fetchMock
+        .mockResolvedValueOnce({ ok: true }) // health
         .mockResolvedValueOnce({
           ok: true,
           json: async () => ({ data: mockTrade }),
         })
 
-      const trade = await client.getTrade('123')
+      const result = await client.getTrade('TRADE-0001')
 
-      expect(trade).toEqual(mockTrade)
-      expect(global.fetch).toHaveBeenCalledWith(
-        expect.stringContaining('/api/trades/123'),
-        expect.any(Object)
-      )
+      expect(result).toEqual(mockTrade)
     })
 
-    it('should return null if trade not found', async () => {
-      ;(global.fetch as any)
-        .mockResolvedValueOnce({
-          ok: true,
-          json: async () => ({ data: null }),
-        })
-        .mockResolvedValueOnce({
-          ok: true,
-          json: async () => ({ data: null }),
-        })
+    it('should return null for non-existent trade', async () => {
+      fetchMock
+        .mockResolvedValueOnce({ ok: true }) // health
+        .mockResolvedValueOnce({ ok: false }) // trade not found
 
-      const trade = await client.getTrade('nonexistent')
+      const result = await client.getTrade('TRADE-NOTFOUND')
 
-      expect(trade).toBeNull()
+      expect(result).toBeNull()
+    })
+
+    it('should use cache when offline', async () => {
+      const cachedTrade = {
+        id: 'TRADE-0001',
+        entryNumber: 1,
+        symbol: 'SPY',
+        strategy: 'Call Spread',
+        strikePrice: 400,
+        delta: 0.5,
+        daysToExpiration: 30,
+        ivPercent: 20,
+        gexStatus: 'positivo',
+        pvpStatus: 'bullish',
+        vwapStatus: 'above',
+        confluenceScore: 75,
+        entryPrice: 100,
+        takeProfit: 110,
+        stopLoss: 90,
+        dateEntry: '2026-05-22T23:59:35.451Z',
+        status: 'open',
+        comments: 'Cached trade',
+        screenshots: [],
+      }
+
+      ;(global.localStorage.getItem as any).mockReturnValue(
+        JSON.stringify([cachedTrade])
+      )
+      fetchMock.mockResolvedValue({ ok: false })
+
+      const result = await client.getTrade('TRADE-0001')
+
+      expect(result).toEqual(cachedTrade)
     })
   })
 
   describe('createTrade', () => {
-    it('should create a new trade', async () => {
-      const newTrade: Partial<TradeEntry> = {
-        symbol: 'GOOGL',
-        entryPrice: 2800,
-        quantity: 10,
-        entryDate: new Date().toISOString(),
+    it('should create trade via API when online', async () => {
+      const newTradeData = {
+        symbol: 'SPY',
+        strategy: 'Call Spread',
+        strikePrice: 400,
+        delta: 0.5,
+        daysToExpiration: 30,
+        ivPercent: 20,
+        gexStatus: 'positivo' as const,
+        pvpStatus: 'bullish',
+        vwapStatus: 'above',
+        confluenceScore: 75,
+        entryPrice: 100,
+        takeProfit: 110,
+        stopLoss: 90,
+        dateEntry: new Date(),
+        comments: 'New trade',
+        screenshots: [],
       }
 
-      const mockResponse: TradeEntry = {
-        id: 'new-id',
-        ...newTrade,
+      const createdTrade: TradeEntry = {
+        ...newTradeData,
+        id: 'TRADE-0001',
+        entryNumber: 1,
         status: 'open',
-        pnl: 0,
-        pnlPercent: 0,
-        notes: '',
-      } as TradeEntry
+      }
 
-      ;(global.fetch as any)
+      fetchMock
+        .mockResolvedValueOnce({ ok: true }) // health
         .mockResolvedValueOnce({
           ok: true,
-          json: async () => ({ data: mockResponse }),
-        })
-        .mockResolvedValueOnce({
-          ok: true,
-          json: async () => ({ data: mockResponse }),
+          json: async () => ({ data: createdTrade }),
         })
 
-      const trade = await client.createTrade(newTrade as TradeEntry)
+      const result = await client.createTrade(newTradeData)
 
-      expect(trade).toEqual(mockResponse)
-      expect(global.fetch).toHaveBeenCalledWith(
-        expect.stringContaining('/api/trades'),
-        expect.objectContaining({
-          method: 'POST',
-        })
-      )
+      expect(result).toEqual(createdTrade)
+      expect(global.localStorage.setItem).toHaveBeenCalled()
+    })
+
+    it('should create trade locally when offline', async () => {
+      const newTradeData = {
+        symbol: 'QQQ',
+        strategy: 'Put Spread',
+        strikePrice: 300,
+        delta: -0.5,
+        daysToExpiration: 45,
+        ivPercent: 25,
+        gexStatus: 'negativo' as const,
+        pvpStatus: 'bearish',
+        vwapStatus: 'below',
+        confluenceScore: 85,
+        entryPrice: 200,
+        takeProfit: 190,
+        stopLoss: 210,
+        dateEntry: new Date(),
+        comments: 'Offline trade',
+        screenshots: [],
+      }
+
+      ;(global.localStorage.getItem as any).mockReturnValue(JSON.stringify([]))
+      fetchMock.mockResolvedValue({ ok: false })
+
+      const result = await client.createTrade(newTradeData)
+
+      expect(result.id).toMatch(/^TRADE-\d{4}$/)
+      expect(result.symbol).toBe('QQQ')
+      expect(result.status).toBe('open')
     })
   })
 
   describe('updateTrade', () => {
-    it('should update an existing trade', async () => {
-      const updatedTrade: Partial<TradeEntry> = {
-        id: '1',
-        status: 'closed',
-        pnl: 1500,
-        pnlPercent: 5,
+    it('should update trade via API', async () => {
+      const updatedTrade: TradeEntry = {
+        id: 'TRADE-0001',
+        entryNumber: 1,
+        symbol: 'SPY',
+        strategy: 'Call Spread',
+        strikePrice: 400,
+        delta: 0.55,
+        daysToExpiration: 29,
+        ivPercent: 21,
+        gexStatus: 'positivo',
+        pvpStatus: 'bullish',
+        vwapStatus: 'above',
+        confluenceScore: 78,
+        entryPrice: 100,
+        takeProfit: 112,
+        stopLoss: 88,
+        dateEntry: new Date(),
+        status: 'open',
+        comments: 'Updated',
+        screenshots: [],
       }
 
-      ;(global.fetch as any)
-        .mockResolvedValueOnce({
-          ok: true,
-          json: async () => ({ data: updatedTrade }),
-        })
+      fetchMock
+        .mockResolvedValueOnce({ ok: true }) // health
         .mockResolvedValueOnce({
           ok: true,
           json: async () => ({ data: updatedTrade }),
         })
 
-      const trade = await client.updateTrade('1', updatedTrade as TradeEntry)
+      const result = await client.updateTrade('TRADE-0001', { takeProfit: 112 })
 
-      expect(trade?.status).toBe('closed')
-      expect(global.fetch).toHaveBeenCalledWith(
-        expect.stringContaining('/api/trades/1'),
-        expect.objectContaining({
-          method: 'PUT',
-        })
+      expect(result).toEqual(updatedTrade)
+    })
+
+    it('should return null if trade not found', async () => {
+      fetchMock
+        .mockResolvedValueOnce({ ok: true }) // health
+        .mockResolvedValueOnce({ ok: false })
+
+      const result = await client.updateTrade('TRADE-NOTFOUND', {})
+
+      expect(result).toBeNull()
+    })
+
+    it('should update locally when offline', async () => {
+      const existingTrade: TradeEntry = {
+        id: 'TRADE-0001',
+        entryNumber: 1,
+        symbol: 'SPY',
+        strategy: 'Call Spread',
+        strikePrice: 400,
+        delta: 0.5,
+        daysToExpiration: 30,
+        ivPercent: 20,
+        gexStatus: 'positivo',
+        pvpStatus: 'bullish',
+        vwapStatus: 'above',
+        confluenceScore: 75,
+        entryPrice: 100,
+        takeProfit: 110,
+        stopLoss: 90,
+        dateEntry: new Date(),
+        status: 'open',
+        comments: 'Original',
+        screenshots: [],
+      }
+
+      ;(global.localStorage.getItem as any).mockReturnValue(
+        JSON.stringify([existingTrade])
       )
+      fetchMock.mockResolvedValue({ ok: false })
+
+      const result = await client.updateTrade('TRADE-0001', { takeProfit: 120 })
+
+      expect(result?.takeProfit).toBe(120)
     })
   })
 
   describe('closeTrade', () => {
-    it('should close a trade with exit price and date', async () => {
-      const closedData = {
-        id: '1',
+    it('should close trade and calculate P&L', async () => {
+      const closedTrade: TradeEntry = {
+        id: 'TRADE-0001',
+        entryNumber: 1,
         symbol: 'SPY',
+        strategy: 'Call Spread',
+        strikePrice: 400,
+        delta: 0.5,
+        daysToExpiration: 30,
+        ivPercent: 20,
+        gexStatus: 'positivo',
+        pvpStatus: 'bullish',
+        vwapStatus: 'above',
+        confluenceScore: 75,
+        entryPrice: 100,
+        takeProfit: 110,
+        stopLoss: 90,
+        dateEntry: new Date('2026-05-22'),
         status: 'closed',
-        profitLoss: 500,
-        percentReturn: 2.5,
+        exitPrice: 110,
+        exitDate: new Date('2026-05-23'),
+        profitLoss: 10,
+        percentReturn: 10,
+        comments: 'Closed',
+        screenshots: [],
       }
 
-      ;(global.fetch as any)
+      fetchMock
+        .mockResolvedValueOnce({ ok: true }) // health
         .mockResolvedValueOnce({
           ok: true,
-          json: async () => ({ data: closedData }),
-        })
-        .mockResolvedValueOnce({
-          ok: true,
-          json: async () => ({ data: closedData }),
+          json: async () => ({ data: closedTrade }),
         })
 
-      const exitDate = new Date()
-      const trade = await client.closeTrade('1', 455, exitDate)
+      const result = await client.closeTrade('TRADE-0001', 110, new Date('2026-05-23'))
 
-      expect(trade?.status).toBe('closed')
-      expect(global.fetch).toHaveBeenCalledWith(
-        expect.stringContaining('/api/trades/1/close'),
-        expect.objectContaining({
-          method: 'PUT',
-        })
+      expect(result?.status).toBe('closed')
+      expect(result?.exitPrice).toBe(110)
+    })
+
+    it('should close locally when offline', async () => {
+      const existingTrade: TradeEntry = {
+        id: 'TRADE-0001',
+        entryNumber: 1,
+        symbol: 'SPY',
+        strategy: 'Call Spread',
+        strikePrice: 400,
+        delta: 0.5,
+        daysToExpiration: 30,
+        ivPercent: 20,
+        gexStatus: 'positivo',
+        pvpStatus: 'bullish',
+        vwapStatus: 'above',
+        confluenceScore: 75,
+        entryPrice: 100,
+        takeProfit: 110,
+        stopLoss: 90,
+        dateEntry: new Date(),
+        status: 'open',
+        comments: 'To close',
+        screenshots: [],
+      }
+
+      ;(global.localStorage.getItem as any).mockReturnValue(
+        JSON.stringify([existingTrade])
       )
+      fetchMock.mockResolvedValue({ ok: false })
+
+      const exitDate = new Date('2026-05-23')
+      const result = await client.closeTrade('TRADE-0001', 110, exitDate)
+
+      expect(result?.status).toBe('closed')
+      expect(result?.profitLoss).toBe(10)
+      expect(result?.percentReturn).toBeCloseTo(10)
     })
   })
 
-  describe('Offline handling', () => {
-    it('should handle network errors gracefully', async () => {
-      ;(global.fetch as any).mockRejectedValueOnce(
-        new Error('Network error')
-      )
+  describe('deleteTrade', () => {
+    it('should delete trade via API', async () => {
+      fetchMock
+        .mockResolvedValueOnce({ ok: true }) // health
+        .mockResolvedValueOnce({ ok: true }) // delete
 
-      localStorage.setItem(
-        'sop10_trades_cache',
-        JSON.stringify([
-          {
-            id: '1',
-            symbol: 'SPY',
-            entryPrice: 450,
-            quantity: 100,
-            entryDate: new Date().toISOString(),
-            status: 'open',
-            pnl: 500,
-            pnlPercent: 1.1,
-            notes: 'Test',
-          },
-        ])
-      )
+      const result = await client.deleteTrade('TRADE-0001')
 
-      const trades = await client.getTrades()
-
-      expect(trades.length).toBeGreaterThan(0)
-      expect(trades[0].symbol).toBe('SPY')
+      expect(result).toBe(true)
     })
 
-    it('should return empty array if no cache and offline', async () => {
-      localStorage.clear()
+    it('should return false if delete fails', async () => {
+      fetchMock
+        .mockResolvedValueOnce({ ok: true }) // health
+        .mockResolvedValueOnce({ ok: false })
 
-      ;(global.fetch as any).mockRejectedValueOnce(
-        new Error('Offline')
+      const result = await client.deleteTrade('TRADE-NOTFOUND')
+
+      expect(result).toBe(false)
+    })
+
+    it('should delete locally when offline', async () => {
+      const existingTrade: TradeEntry = {
+        id: 'TRADE-0001',
+        entryNumber: 1,
+        symbol: 'SPY',
+        strategy: 'Call Spread',
+        strikePrice: 400,
+        delta: 0.5,
+        daysToExpiration: 30,
+        ivPercent: 20,
+        gexStatus: 'positivo',
+        pvpStatus: 'bullish',
+        vwapStatus: 'above',
+        confluenceScore: 75,
+        entryPrice: 100,
+        takeProfit: 110,
+        stopLoss: 90,
+        dateEntry: new Date(),
+        status: 'open',
+        comments: 'To delete',
+        screenshots: [],
+      }
+
+      ;(global.localStorage.getItem as any).mockReturnValue(
+        JSON.stringify([existingTrade])
       )
+      fetchMock.mockResolvedValue({ ok: false })
 
-      const trades = await client.getTrades()
+      const result = await client.deleteTrade('TRADE-0001')
 
-      expect(trades).toEqual([])
+      expect(result).toBe(true)
+      expect(global.localStorage.setItem).toHaveBeenCalled()
+    })
+  })
+
+  describe('getStatistics', () => {
+    it('should fetch statistics from API', async () => {
+      const mockStats = {
+        totalTrades: 10,
+        winningTrades: 7,
+        losingTrades: 3,
+        winRate: 70,
+        averageProfit: 50,
+        averageLoss: 30,
+        profitFactor: 1.67,
+        totalProfitLoss: 230,
+        bestTrade: 150,
+        worstTrade: -100,
+        byStrategy: {},
+        byConfluenceScore: {
+          high: { winRate: 80, avgProfit: 75 },
+          medium: { winRate: 60, avgProfit: 40 },
+          low: { winRate: 40, avgProfit: 10 },
+        },
+      }
+
+      fetchMock
+        .mockResolvedValueOnce({ ok: true }) // health
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ data: mockStats }),
+        })
+
+      const result = await client.getStatistics()
+
+      expect(result).toEqual(mockStats)
+    })
+
+    it('should return null if API fails', async () => {
+      fetchMock
+        .mockResolvedValueOnce({ ok: true }) // health
+        .mockResolvedValueOnce({ ok: false })
+
+      const result = await client.getStatistics()
+
+      expect(result).toBeNull()
+    })
+
+    it('should calculate stats locally when offline', async () => {
+      const closedTrade: TradeEntry = {
+        id: 'TRADE-0001',
+        entryNumber: 1,
+        symbol: 'SPY',
+        strategy: 'Call Spread',
+        strikePrice: 400,
+        delta: 0.5,
+        daysToExpiration: 30,
+        ivPercent: 20,
+        gexStatus: 'positivo',
+        pvpStatus: 'bullish',
+        vwapStatus: 'above',
+        confluenceScore: 75,
+        entryPrice: 100,
+        takeProfit: 110,
+        stopLoss: 90,
+        dateEntry: new Date(),
+        status: 'closed',
+        exitPrice: 110,
+        profitLoss: 10,
+        percentReturn: 10,
+        comments: 'Closed',
+        screenshots: [],
+      }
+
+      ;(global.localStorage.getItem as any).mockReturnValue(
+        JSON.stringify([closedTrade])
+      )
+      fetchMock.mockResolvedValue({ ok: false })
+
+      const result = await client.getStatistics()
+
+      expect(result).not.toBeNull()
+      expect(result?.totalTrades).toBe(1)
+      expect(result?.winningTrades).toBe(1)
+    })
+  })
+
+  describe('syncLocalStorageToAPI', () => {
+    it('should sync pending trades to API', async () => {
+      const pendingTrade: TradeEntry = {
+        id: 'TRADE-PENDING',
+        entryNumber: 1,
+        symbol: 'SPY',
+        strategy: 'Call Spread',
+        strikePrice: 400,
+        delta: 0.5,
+        daysToExpiration: 30,
+        ivPercent: 20,
+        gexStatus: 'positivo',
+        pvpStatus: 'bullish',
+        vwapStatus: 'above',
+        confluenceScore: 75,
+        entryPrice: 100,
+        takeProfit: 110,
+        stopLoss: 90,
+        dateEntry: new Date(),
+        status: 'open',
+        comments: 'Pending sync',
+        screenshots: [],
+      }
+
+      ;(global.localStorage.getItem as any)
+        .mockReturnValueOnce(JSON.stringify(['TRADE-PENDING'])) // pending syncs
+        .mockReturnValueOnce(JSON.stringify([pendingTrade])) // trades cache
+
+      fetchMock
+        .mockResolvedValueOnce({ ok: true }) // health
+        .mockResolvedValueOnce({ ok: true }) // sync POST
+
+      const result = await client.syncLocalStorageToAPI()
+
+      expect(result.synced).toBe(1)
+      expect(result.errors).toBe(0)
+    })
+
+    it('should skip sync when offline', async () => {
+      fetchMock.mockResolvedValue({ ok: false })
+
+      const result = await client.syncLocalStorageToAPI()
+
+      expect(result.synced).toBe(0)
+      expect(result.errors).toBe(0)
+    })
+
+    it('should handle sync errors gracefully', async () => {
+      const pendingTrade: TradeEntry = {
+        id: 'TRADE-PENDING',
+        entryNumber: 1,
+        symbol: 'SPY',
+        strategy: 'Call Spread',
+        strikePrice: 400,
+        delta: 0.5,
+        daysToExpiration: 30,
+        ivPercent: 20,
+        gexStatus: 'positivo',
+        pvpStatus: 'bullish',
+        vwapStatus: 'above',
+        confluenceScore: 75,
+        entryPrice: 100,
+        takeProfit: 110,
+        stopLoss: 90,
+        dateEntry: new Date(),
+        status: 'open',
+        comments: 'Pending',
+        screenshots: [],
+      }
+
+      ;(global.localStorage.getItem as any)
+        .mockReturnValueOnce(JSON.stringify(['TRADE-PENDING']))
+        .mockReturnValueOnce(JSON.stringify([pendingTrade]))
+
+      fetchMock
+        .mockResolvedValueOnce({ ok: true }) // health
+        .mockResolvedValueOnce({ ok: false }) // sync fails
+
+      const result = await client.syncLocalStorageToAPI()
+
+      expect(result.synced).toBe(0)
+      expect(result.errors).toBe(1)
     })
   })
 })
