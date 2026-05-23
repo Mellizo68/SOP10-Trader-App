@@ -63,7 +63,7 @@ async function startServer() {
   })
 
   // Global error handler (ensures CORS headers on errors)
-  app.use((err, req, res, next) => {
+  app.use((err: any, req: any, res: any, next: any) => {
     console.error('Global error handler:', err)
     res.status(500).json({
       success: false,
