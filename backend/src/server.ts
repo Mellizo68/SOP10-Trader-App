@@ -9,7 +9,28 @@ async function startServer() {
 
   // Middleware
   app.use(express.json())
-  app.use(cors())
+
+  // Configure CORS for production and development
+  const allowedOrigins = [
+    'https://sop10-trader-app.vercel.app',     // Production frontend
+    'http://localhost:3000',                    // Local development
+    'http://127.0.0.1:3000',                    // Local development alt
+  ]
+
+  app.use(cors({
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like mobile apps or Postman)
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true)
+      } else {
+        callback(new Error('CORS not allowed'))
+      }
+    },
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true,
+  }))
+
   app.use(compression({ level: 6, threshold: 1024 }))
 
   // Import routes
@@ -39,6 +60,15 @@ async function startServer() {
   // 404 handler
   app.use((req, res) => {
     res.status(404).json({ success: false, error: 'Not found' })
+  })
+
+  // Global error handler (ensures CORS headers on errors)
+  app.use((err, req, res, next) => {
+    console.error('Global error handler:', err)
+    res.status(500).json({
+      success: false,
+      error: err.message || 'Internal server error',
+    })
   })
 
   // Start
