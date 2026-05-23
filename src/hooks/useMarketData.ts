@@ -236,7 +236,6 @@ export const useMarketData = (
 
           // Don't treat abort errors as real errors (request was cancelled)
           if (error instanceof Error && error.name === 'AbortError') {
-            console.debug(`Request cancelled for symbol: ${upperSymbol}`);
             return;
           }
 
@@ -245,7 +244,6 @@ export const useMarketData = (
 
           // Handle timeout errors with auto-retry
           if (errorMessage.includes('timeout') && !isRetry) {
-            console.log(`Timeout for ${upperSymbol}, retrying in 5 seconds...`);
             setState(prev => ({
               ...prev,
               loading: false,

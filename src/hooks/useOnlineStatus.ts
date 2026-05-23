@@ -12,12 +12,10 @@ export function useOnlineStatus(): boolean {
   useEffect(() => {
     const handleOnline = () => {
       setIsOnline(true)
-      console.log('🔗 Application is now online')
     }
 
     const handleOffline = () => {
       setIsOnline(false)
-      console.log('📡 Application is now offline')
     }
 
     window.addEventListener('online', handleOnline)

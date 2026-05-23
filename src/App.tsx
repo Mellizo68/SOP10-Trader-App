@@ -45,10 +45,8 @@ function App() {
   useEffect(() => {
     const initializeSync = async () => {
       try {
-        console.log('🔄 Initializing API sync...')
         const result = await TradeJournalService.syncPendingTrades()
         if (result.synced > 0) {
-          console.log(`✅ Synced ${result.synced} trades from localStorage`)
         }
       } catch (error) {
         console.warn('API sync failed, using offline mode:', error)
@@ -59,7 +57,6 @@ function App() {
 
     // Listen for when the app comes online
     const handleOnline = async () => {
-      console.log('🔗 Back online - syncing pending trades...')
       await TradeJournalService.syncPendingTrades()
     }
 

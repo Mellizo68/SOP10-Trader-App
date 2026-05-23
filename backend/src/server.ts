@@ -4,7 +4,7 @@ async function startServer() {
   const cors = (await import('cors')).default
   const compression = (await import('compression')).default
 
-  const PORT = process.env.PORT || 3000
+  const PORT = process.env.PORT || 8080
   const app = express()
 
   // Middleware
@@ -37,11 +37,17 @@ async function startServer() {
   const tradesRouter = (await import('./routes/trades.js')).default
   const marketRouter = (await import('./routes/market.js')).default
   const statsRouter = (await import('./routes/stats.js')).default
+  const discoveryRouter = (await import('./routes/discovery.js')).default
+  const historicalRouter = (await import('./routes/historical.js')).default
+  const backtestingRouter = (await import('./routes/backtesting.js')).default
 
   // Register routes
   app.use('/api/trades', tradesRouter)
   app.use('/api/market', marketRouter)
   app.use('/api/stats', statsRouter)
+  app.use('/api', discoveryRouter)
+  app.use('/api', historicalRouter)
+  app.use('/api', backtestingRouter)
 
   // Health endpoints
   app.get('/health', (req, res) => {

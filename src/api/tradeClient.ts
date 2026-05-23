@@ -1,6 +1,6 @@
 import { TradeEntry, Statistics } from '../types'
 
-const API_BASE_URL = ((import.meta as any).env.VITE_API_URL as string) || 'http://localhost:5000/api'
+const API_BASE_URL = ((import.meta as any).env.VITE_API_URL as string) || 'http://localhost:8080/api'
 
 /**
  * Trade API Client - Handles communication with backend API
@@ -40,7 +40,6 @@ export class TradeAPIClient {
       const isOnline = await this.isOnline()
 
       if (!isOnline) {
-        console.log('API offline - using cached data from localStorage')
         return this.getTradesFromCache()
       }
 
@@ -103,7 +102,6 @@ export class TradeAPIClient {
       const isOnline = await this.isOnline()
 
       if (!isOnline) {
-        console.log('API offline - saving trade locally')
         return this.createTradeLocally(data)
       }
 
@@ -218,7 +216,6 @@ export class TradeAPIClient {
       const isOnline = await this.isOnline()
 
       if (!isOnline) {
-        console.log('API offline - deleting trade locally')
         return this.deleteTradeLocally(id)
       }
 
@@ -249,7 +246,6 @@ export class TradeAPIClient {
       const isOnline = await this.isOnline()
 
       if (!isOnline) {
-        console.log('API offline - calculating stats from cache')
         return this.calculateStatsLocally()
       }
 
@@ -277,18 +273,15 @@ export class TradeAPIClient {
       const isOnline = await this.isOnline()
 
       if (!isOnline) {
-        console.log('API is offline - sync skipped')
         return { synced: 0, errors: 0 }
       }
 
       const pendingTrades = this.getPendingTrades()
 
       if (pendingTrades.length === 0) {
-        console.log('No trades to sync')
         return { synced: 0, errors: 0 }
       }
 
-      console.log(`Syncing ${pendingTrades.length} pending trades...`)
 
       let synced = 0
       let errors = 0
@@ -312,7 +305,6 @@ export class TradeAPIClient {
         }
       }
 
-      console.log(`Sync complete: ${synced} synced, ${errors} errors`)
       return { synced, errors }
     } catch (error) {
       console.error('Sync error:', error)

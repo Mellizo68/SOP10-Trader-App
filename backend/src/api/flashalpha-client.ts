@@ -170,6 +170,12 @@ class FlashAlphaClient {
       const response = await this.client.get('/gex', { params });
 
       if (response.status === 200 && response.data) {
+        logger.debug('GEX data received', {
+          symbol,
+          strike,
+          gex: response.data.gex,
+        });
+
         return {
           symbol: response.data.symbol || symbol,
           strike: response.data.strike,
@@ -180,13 +186,31 @@ class FlashAlphaClient {
         };
       }
 
+      logger.warn('Empty GEX response from API', { symbol, strike });
       return null;
     } catch (error) {
-      logger.error('Error fetching GEX', {
+      // In production, throw error so controller can handle gracefully
+      // In development, optionally fall back to mock (controlled by FLASHALPHA_FALLBACK env var)
+      const shouldFallbackToMock = process.env.NODE_ENV === 'development' &&
+                                   process.env.FLASHALPHA_FALLBACK === 'mock';
+
+      if (shouldFallbackToMock) {
+        logger.warn('Falling back to mock GEX data', {
+          symbol,
+          reason: error instanceof Error ? error.message : String(error),
+        });
+        return this.generateMockGEX(symbol);
+      }
+
+      // Throw error with detailed context for controller to handle
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logger.error('Error fetching GEX from FlashAlpha', {
         symbol,
-        error: error instanceof Error ? error.message : String(error),
+        strike,
+        error: errorMessage,
+        status: (error as any).response?.status,
       });
-      return null;
+      throw error;
     }
   }
 
@@ -250,6 +274,11 @@ class FlashAlphaClient {
       const response = await this.client.get(`/greeks/${symbol}`);
 
       if (response.status === 200 && Array.isArray(response.data)) {
+        logger.debug('Greeks data received', {
+          symbol,
+          count: response.data.length,
+        });
+
         return response.data.map((item: any) => ({
           symbol: item.symbol || symbol,
           strike: item.strike,
@@ -265,13 +294,29 @@ class FlashAlphaClient {
         }));
       }
 
+      logger.warn('Empty Greeks response from API', { symbol });
       return [];
     } catch (error) {
-      logger.error('Error fetching Greeks by symbol', {
+      // In production, throw error so controller can handle gracefully
+      // In development, optionally fall back to mock (controlled by FLASHALPHA_FALLBACK env var)
+      const shouldFallbackToMock = process.env.NODE_ENV === 'development' &&
+                                   process.env.FLASHALPHA_FALLBACK === 'mock';
+
+      if (shouldFallbackToMock) {
+        logger.warn('Falling back to mock Greeks data', {
+          symbol,
+          reason: error instanceof Error ? error.message : String(error),
+        });
+        return this.generateMockGreeks(symbol);
+      }
+
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logger.error('Error fetching Greeks from FlashAlpha', {
         symbol,
-        error: error instanceof Error ? error.message : String(error),
+        error: errorMessage,
+        status: (error as any).response?.status,
       });
-      return [];
+      throw error;
     }
   }
 
@@ -286,6 +331,11 @@ class FlashAlphaClient {
       const response = await this.client.get(`/gamma-flip/${symbol}`);
 
       if (response.status === 200 && response.data) {
+        logger.debug('Gamma Flip data received', {
+          symbol,
+          direction: response.data.direction,
+        });
+
         return {
           symbol: response.data.symbol || symbol,
           flipLevel: response.data.flipLevel || 0,
@@ -295,13 +345,27 @@ class FlashAlphaClient {
         };
       }
 
+      logger.warn('Empty Gamma Flip response from API', { symbol });
       return null;
     } catch (error) {
-      logger.error('Error fetching Gamma Flip', {
+      const shouldFallbackToMock = process.env.NODE_ENV === 'development' &&
+                                   process.env.FLASHALPHA_FALLBACK === 'mock';
+
+      if (shouldFallbackToMock) {
+        logger.warn('Falling back to mock Gamma Flip data', {
+          symbol,
+          reason: error instanceof Error ? error.message : String(error),
+        });
+        return this.generateMockGammaFlip(symbol);
+      }
+
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logger.error('Error fetching Gamma Flip from FlashAlpha', {
         symbol,
-        error: error instanceof Error ? error.message : String(error),
+        error: errorMessage,
+        status: (error as any).response?.status,
       });
-      return null;
+      throw error;
     }
   }
 
@@ -321,6 +385,11 @@ class FlashAlphaClient {
       const response = await this.client.get('/options-walls', { params });
 
       if (response.status === 200 && Array.isArray(response.data)) {
+        logger.debug('Options Walls data received', {
+          symbol,
+          count: response.data.length,
+        });
+
         return response.data.map((item: any) => ({
           symbol: item.symbol || symbol,
           strikePrice: item.strikePrice || item.strike,
@@ -336,14 +405,28 @@ class FlashAlphaClient {
         }));
       }
 
+      logger.warn('Empty Options Walls response from API', { symbol });
       return [];
     } catch (error) {
-      logger.error('Error fetching Options Walls', {
+      const shouldFallbackToMock = process.env.NODE_ENV === 'development' &&
+                                   process.env.FLASHALPHA_FALLBACK === 'mock';
+
+      if (shouldFallbackToMock) {
+        logger.warn('Falling back to mock Options Walls data', {
+          symbol,
+          reason: error instanceof Error ? error.message : String(error),
+        });
+        return this.generateMockWalls(symbol);
+      }
+
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logger.error('Error fetching Options Walls from FlashAlpha', {
         symbol,
         strikePrice,
-        error: error instanceof Error ? error.message : String(error),
+        error: errorMessage,
+        status: (error as any).response?.status,
       });
-      return [];
+      throw error;
     }
   }
 
@@ -357,6 +440,11 @@ class FlashAlphaClient {
       const response = await this.client.get(`/volume-oi/${symbol}`);
 
       if (response.status === 200 && Array.isArray(response.data)) {
+        logger.debug('Volume/OI data received', {
+          symbol,
+          count: response.data.length,
+        });
+
         return response.data.map((item: any) => ({
           symbol: item.symbol || symbol,
           strikePrice: item.strikePrice || item.strike,
@@ -369,13 +457,27 @@ class FlashAlphaClient {
         }));
       }
 
+      logger.warn('Empty Volume/OI response from API', { symbol });
       return [];
     } catch (error) {
-      logger.error('Error fetching Volume/OI', {
+      const shouldFallbackToMock = process.env.NODE_ENV === 'development' &&
+                                   process.env.FLASHALPHA_FALLBACK === 'mock';
+
+      if (shouldFallbackToMock) {
+        logger.warn('Falling back to mock Volume/OI data', {
+          symbol,
+          reason: error instanceof Error ? error.message : String(error),
+        });
+        return this.generateMockVolumeOI(symbol);
+      }
+
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logger.error('Error fetching Volume/OI from FlashAlpha', {
         symbol,
-        error: error instanceof Error ? error.message : String(error),
+        error: errorMessage,
+        status: (error as any).response?.status,
       });
-      return [];
+      throw error;
     }
   }
 
@@ -429,13 +531,102 @@ class FlashAlphaClient {
     try {
       await this.enforceRateLimit();
       const response = await this.client.get('/health');
-      return response.status === 200;
+
+      if (response.status === 200) {
+        logger.debug('FlashAlpha API health check passed');
+        return true;
+      }
+
+      logger.warn('FlashAlpha health check returned non-200 status', {
+        status: response.status,
+      });
+      return false;
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
       logger.error('FlashAlpha health check failed', {
-        error: error instanceof Error ? error.message : String(error),
+        error: errorMessage,
+        status: (error as any).response?.status,
       });
       return false;
     }
+  }
+
+  /**
+   * Generate mock market data for development/testing
+   */
+  private generateMockGEX(symbol: string): GEXData {
+    const price = 400 + Math.random() * 50;
+    return {
+      symbol,
+      gex: Math.random() * 10000000,
+      gexPercent: (Math.random() - 0.5) * 10,
+      gammaFlip: Math.random() > 0.7,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  private generateMockGreeks(symbol: string): GreeksData[] {
+    const basePrice = 400 + Math.random() * 50;
+    const strikes = [basePrice - 20, basePrice - 10, basePrice, basePrice + 10, basePrice + 20];
+
+    return strikes.map((strike, idx) => ({
+      symbol,
+      strike: Math.round(strike),
+      expiration: '2026-06-20',
+      optionType: idx % 2 === 0 ? 'call' : 'put',
+      delta: Math.random(),
+      gamma: Math.random() * 0.1,
+      theta: -Math.random() * 0.5,
+      vega: Math.random() * 2,
+      iv: 0.2 + Math.random() * 0.1,
+      price: Math.random() * 20,
+      timestamp: new Date().toISOString(),
+    }));
+  }
+
+  private generateMockGammaFlip(symbol: string): GammaFlipData {
+    return {
+      symbol,
+      flipLevel: 400 + Math.random() * 50,
+      direction: ['up', 'down', 'neutral'][Math.floor(Math.random() * 3)] as any,
+      strength: Math.random(),
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  private generateMockWalls(symbol: string): OptionsWallsData[] {
+    const basePrice = 400 + Math.random() * 50;
+    const strikes = [basePrice - 10, basePrice, basePrice + 10];
+
+    return strikes.map(strike => ({
+      symbol,
+      strikePrice: Math.round(strike),
+      putWall: {
+        contracts: Math.floor(Math.random() * 100000),
+        level: ['strong', 'moderate', 'weak'][Math.floor(Math.random() * 3)],
+      },
+      callWall: {
+        contracts: Math.floor(Math.random() * 100000),
+        level: ['strong', 'moderate', 'weak'][Math.floor(Math.random() * 3)],
+      },
+      timestamp: new Date().toISOString(),
+    }));
+  }
+
+  private generateMockVolumeOI(symbol: string): VolumeOIData[] {
+    const basePrice = 400 + Math.random() * 50;
+    const strikes = [basePrice - 10, basePrice, basePrice + 10];
+
+    return strikes.map(strike => ({
+      symbol,
+      strikePrice: Math.round(strike),
+      expiration: '2026-06-20',
+      callOI: Math.floor(Math.random() * 1000000),
+      callVolume: Math.floor(Math.random() * 500000),
+      putOI: Math.floor(Math.random() * 1000000),
+      putVolume: Math.floor(Math.random() * 500000),
+      timestamp: new Date().toISOString(),
+    }));
   }
 
   /**

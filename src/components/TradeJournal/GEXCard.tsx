@@ -56,8 +56,8 @@ export const GEXCard: React.FC<GEXCardProps> = ({ gex, gammaFlip, loading, error
       <div className="space-y-3">
         {/* Title */}
         <div className="flex items-center justify-between">
-          <h3 className="font-bold text-lg">GEX (Gamma Exposure)</h3>
-          <span className="text-xs bg-blue-200 text-blue-800 px-2 py-1 rounded">
+          <h3 className="font-bold text-lg text-gray-900">GEX (Gamma Exposure)</h3>
+          <span className="text-xs bg-white text-blue-700 px-3 py-1 rounded font-semibold border border-blue-300">
             {gex.symbol}
           </span>
         </div>

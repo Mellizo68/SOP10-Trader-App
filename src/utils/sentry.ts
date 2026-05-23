@@ -13,7 +13,6 @@ class SentryStub {
   init(options: any): void {
     this.dsn = options.dsn
     this.isInitialized = true
-    console.log('[Sentry] Initialized for error tracking')
   }
 
   captureException(error: Error, context?: any): void {
@@ -63,7 +62,6 @@ class SentryStub {
       console.warn('[Sentry] Failed to send error:', err.message)
     })
 
-    console.log('[Sentry] Error captured and sent:', error.message)
   }
 
   private parseStackTrace(stack?: string): any[] {
@@ -88,8 +86,7 @@ const Sentry = new SentryStub()
 export function initSentry(): void {
   const dsn = import.meta.env.VITE_SENTRY_DSN
 
-  console.log('[Sentry] DEBUG - VITE_SENTRY_DSN value:', dsn)
-  console.log('[Sentry] DEBUG - All env vars:', {
+  console.debug('[Sentry] Initializing with config:', {
     mode: import.meta.env.MODE,
     dev: import.meta.env.DEV,
     prod: import.meta.env.PROD,

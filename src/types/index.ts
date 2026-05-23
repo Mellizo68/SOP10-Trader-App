@@ -174,4 +174,5 @@ export interface TradeFilter {
   zScoreMin?: number
   zScoreMax?: number
   searchSymbol?: string
+  symbolSearch?: string
 }

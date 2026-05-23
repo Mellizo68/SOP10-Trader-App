@@ -37,11 +37,11 @@ const TradeHistoryTableComponent: React.FC<TradeHistoryTableProps> = ({ trades, 
     }
 
     if (filters.confluenceMin !== undefined) {
-      result = result.filter(t => t.confluenceScore >= filters.confluenceMin)
+      result = result.filter(t => t.confluenceScore >= (filters.confluenceMin ?? 0))
     }
 
     if (filters.confluenceMax !== undefined) {
-      result = result.filter(t => t.confluenceScore <= filters.confluenceMax)
+      result = result.filter(t => t.confluenceScore <= (filters.confluenceMax ?? 100))
     }
 
     if (filters.symbolSearch) {

@@ -267,7 +267,7 @@ const CustomBar = (props: any) => {
       width={width}
       height={Math.abs(height)}
       fill={isPositive ? '#10b981' : '#ef4444'}
-      radius={[8, 8, 0, 0]}
+      rx={4}
     />
   )
 }

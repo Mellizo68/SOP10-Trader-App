@@ -14,6 +14,8 @@ import { parseStrikeFilter, filterGreeks, filterWalls, filterVolumeOI } from '..
  * GET /api/market/gex/:symbol
  * Get GEX (Gamma Exposure) data for a symbol
  * Cached for 5 minutes per symbol
+ *
+ * Error Recovery: Real API → Cached data → Error response
  */
 export const getGEX = async (req: Request, res: Response) => {
   try {
@@ -32,34 +34,64 @@ export const getGEX = async (req: Request, res: Response) => {
 
     // Check cache first
     let gexData = cache.get<GEXData>(cacheKey);
+    let fromCache = false;
+    let apiError: Error | null = null;
 
     if (!gexData) {
       // Cache miss - fetch from API with deduplication
-      const { dedup } = await import('../utils/requestDedup.js');
-      gexData = await dedup.execute(`gex:${cacheKey}`, async () => {// import { dedup } from '../utils/requestDedup';
-        return await flashAlphaClient.getGEX(
-          upperSymbol,
-          strike ? parseInt(strike as string) : undefined
-        );
-      });
+      try {
+        const { dedup } = await import('../utils/requestDedup.js');
+        gexData = await dedup.execute(`gex:${cacheKey}`, async () => {
+          return await flashAlphaClient.getGEX(
+            upperSymbol,
+            strike ? parseInt(strike as string) : undefined
+          );
+        });
 
-      if (gexData) {
-        // Store in cache for 5 minutes (300 seconds)
-        cache.set(cacheKey, gexData, 300);
+        if (gexData) {
+          // Store in cache for 5 minutes (300 seconds)
+          cache.set(cacheKey, gexData, 300);
+          logger.debug('GEX data fetched from FlashAlpha', {
+            symbol: upperSymbol,
+          });
+        }
+      } catch (error) {
+        apiError = error instanceof Error ? error : new Error(String(error));
+        logger.warn('FlashAlpha GEX call failed', {
+          symbol: upperSymbol,
+          error: apiError.message,
+        });
+
+        // Try to get cached data (ignore TTL)
+        gexData = cache.get<GEXData>(cacheKey, true);
+        if (gexData) {
+          fromCache = true;
+          logger.info('Using stale cached GEX data', {
+            symbol: upperSymbol,
+          });
+        }
       }
+    } else {
+      fromCache = true;
     }
 
     if (!gexData) {
-      return res.status(404).json({
+      logger.error('No GEX data available', {
+        symbol: upperSymbol,
+        apiError: apiError?.message,
+      });
+      return res.status(503).json({
         success: false,
-        error: `No GEX data found for ${symbol}`,
+        error: `No GEX data available for ${symbol}`,
+        ...(apiError && { details: apiError.message }),
       });
     }
 
     res.json({
       success: true,
       data: gexData,
-      cached: cache.has(cacheKey),
+      cached: fromCache,
+      ...(fromCache && apiError && { warning: 'Using cached data - API is unavailable' }),
     });
   } catch (error) {
     logger.error('Error in getGEX endpoint', {
@@ -68,7 +100,7 @@ export const getGEX = async (req: Request, res: Response) => {
     });
     res.status(500).json({
       success: false,
-      error: 'Failed to fetch GEX data',
+      error: 'Internal server error processing GEX request',
     });
   }
 };
@@ -77,6 +109,8 @@ export const getGEX = async (req: Request, res: Response) => {
  * GET /api/market/greeks/:symbol
  * Get all Greeks data for a symbol
  * Cached for 5 minutes per symbol
+ *
+ * Error Recovery: Real API → Cached data → Error response
  */
 export const getGreeks = async (req: Request, res: Response) => {
   try {
@@ -94,25 +128,51 @@ export const getGreeks = async (req: Request, res: Response) => {
 
     // Check cache first
     let greeksData = cache.get<GreeksData[]>(cacheKey);
+    let fromCache = false;
+    let apiError: Error | null = null;
 
     if (!greeksData) {
       // Cache miss - fetch from API with deduplication
-      const { dedup } = await import('../utils/requestDedup.js');
-      greeksData = await dedup.execute(`greeks:${cacheKey}`, async () => {
-        return await flashAlphaClient.getGreeksBySymbol(upperSymbol);
-      });
+      try {
+        const { dedup } = await import('../utils/requestDedup.js');
+        greeksData = await dedup.execute(`greeks:${cacheKey}`, async () => {
+          return await flashAlphaClient.getGreeksBySymbol(upperSymbol);
+        });
 
-      if (greeksData) {
-        // Store in cache for 5 minutes (300 seconds)
-        cache.set(cacheKey, greeksData, 300);
+        if (greeksData) {
+          // Store in cache for 5 minutes (300 seconds)
+          cache.set(cacheKey, greeksData, 300);
+          logger.debug('Greeks data fetched from FlashAlpha', {
+            symbol: upperSymbol,
+            count: greeksData.length,
+          });
+        }
+      } catch (error) {
+        apiError = error instanceof Error ? error : new Error(String(error));
+        logger.warn('FlashAlpha Greeks call failed', {
+          symbol: upperSymbol,
+          error: apiError.message,
+        });
+
+        // Try to get cached data (ignore TTL)
+        greeksData = cache.get<GreeksData[]>(cacheKey, true);
+        if (greeksData) {
+          fromCache = true;
+          logger.info('Using stale cached Greeks data', {
+            symbol: upperSymbol,
+          });
+        }
       }
+    } else {
+      fromCache = true;
     }
 
     res.json({
       success: true,
-      data: greeksData,
+      data: greeksData || [],
       count: greeksData?.length || 0,
-      cached: cache.has(cacheKey),
+      cached: fromCache,
+      ...(fromCache && apiError && { warning: 'Using cached data - API is unavailable' }),
     });
   } catch (error) {
     logger.error('Error in getGreeks endpoint', {
@@ -121,7 +181,7 @@ export const getGreeks = async (req: Request, res: Response) => {
     });
     res.status(500).json({
       success: false,
-      error: 'Failed to fetch Greeks data',
+      error: 'Internal server error processing Greeks request',
     });
   }
 };
@@ -130,6 +190,8 @@ export const getGreeks = async (req: Request, res: Response) => {
  * GET /api/market/gamma-flip/:symbol
  * Get Gamma Flip data (potential reversal points)
  * Cached for 5 minutes per symbol
+ *
+ * Error Recovery: Real API → Cached data → Error response
  */
 export const getGammaFlip = async (req: Request, res: Response) => {
   try {
@@ -147,31 +209,61 @@ export const getGammaFlip = async (req: Request, res: Response) => {
 
     // Check cache first
     let flipData = cache.get<GammaFlipData>(cacheKey);
+    let fromCache = false;
+    let apiError: Error | null = null;
 
     if (!flipData) {
       // Cache miss - fetch from API with deduplication
-      const { dedup } = await import('../utils/requestDedup.js');
-      flipData = await dedup.execute(`gammaflip:${cacheKey}`, async () => {
-        return await flashAlphaClient.getGammaFlip(upperSymbol);
-      });
+      try {
+        const { dedup } = await import('../utils/requestDedup.js');
+        flipData = await dedup.execute(`gammaflip:${cacheKey}`, async () => {
+          return await flashAlphaClient.getGammaFlip(upperSymbol);
+        });
 
-      if (flipData) {
-        // Store in cache for 5 minutes (300 seconds)
-        cache.set(cacheKey, flipData, 300);
+        if (flipData) {
+          // Store in cache for 5 minutes (300 seconds)
+          cache.set(cacheKey, flipData, 300);
+          logger.debug('Gamma Flip data fetched from FlashAlpha', {
+            symbol: upperSymbol,
+          });
+        }
+      } catch (error) {
+        apiError = error instanceof Error ? error : new Error(String(error));
+        logger.warn('FlashAlpha Gamma Flip call failed', {
+          symbol: upperSymbol,
+          error: apiError.message,
+        });
+
+        // Try to get cached data (ignore TTL)
+        flipData = cache.get<GammaFlipData>(cacheKey, true);
+        if (flipData) {
+          fromCache = true;
+          logger.info('Using stale cached Gamma Flip data', {
+            symbol: upperSymbol,
+          });
+        }
       }
+    } else {
+      fromCache = true;
     }
 
     if (!flipData) {
-      return res.status(404).json({
+      logger.error('No Gamma Flip data available', {
+        symbol: upperSymbol,
+        apiError: apiError?.message,
+      });
+      return res.status(503).json({
         success: false,
-        error: `No Gamma Flip data found for ${symbol}`,
+        error: `No Gamma Flip data available for ${symbol}`,
+        ...(apiError && { details: apiError.message }),
       });
     }
 
     res.json({
       success: true,
       data: flipData,
-      cached: cache.has(cacheKey),
+      cached: fromCache,
+      ...(fromCache && apiError && { warning: 'Using cached data - API is unavailable' }),
     });
   } catch (error) {
     logger.error('Error in getGammaFlip endpoint', {
@@ -180,7 +272,7 @@ export const getGammaFlip = async (req: Request, res: Response) => {
     });
     res.status(500).json({
       success: false,
-      error: 'Failed to fetch Gamma Flip data',
+      error: 'Internal server error processing Gamma Flip request',
     });
   }
 };
@@ -189,6 +281,8 @@ export const getGammaFlip = async (req: Request, res: Response) => {
  * GET /api/market/walls/:symbol
  * Get Options Walls (Put/Call wall strength)
  * Cached for 5 minutes per symbol
+ *
+ * Error Recovery: Real API → Cached data → Error response
  */
 export const getOptionsWalls = async (req: Request, res: Response) => {
   try {
@@ -207,28 +301,54 @@ export const getOptionsWalls = async (req: Request, res: Response) => {
 
     // Check cache first
     let wallsData = cache.get<OptionsWallsData[]>(cacheKey);
+    let fromCache = false;
+    let apiError: Error | null = null;
 
     if (!wallsData) {
       // Cache miss - fetch from API with deduplication
-      const { dedup } = await import('../utils/requestDedup.js');
-      wallsData = await dedup.execute(`walls:${cacheKey}`, async () => {
-        return await flashAlphaClient.getOptionsWalls(
-          upperSymbol,
-          strike ? parseInt(strike as string) : undefined
-        );
-      });
+      try {
+        const { dedup } = await import('../utils/requestDedup.js');
+        wallsData = await dedup.execute(`walls:${cacheKey}`, async () => {
+          return await flashAlphaClient.getOptionsWalls(
+            upperSymbol,
+            strike ? parseInt(strike as string) : undefined
+          );
+        });
 
-      if (wallsData) {
-        // Store in cache for 5 minutes (300 seconds)
-        cache.set(cacheKey, wallsData, 300);
+        if (wallsData) {
+          // Store in cache for 5 minutes (300 seconds)
+          cache.set(cacheKey, wallsData, 300);
+          logger.debug('Options Walls data fetched from FlashAlpha', {
+            symbol: upperSymbol,
+            count: wallsData.length,
+          });
+        }
+      } catch (error) {
+        apiError = error instanceof Error ? error : new Error(String(error));
+        logger.warn('FlashAlpha Options Walls call failed', {
+          symbol: upperSymbol,
+          error: apiError.message,
+        });
+
+        // Try to get cached data (ignore TTL)
+        wallsData = cache.get<OptionsWallsData[]>(cacheKey, true);
+        if (wallsData) {
+          fromCache = true;
+          logger.info('Using stale cached Options Walls data', {
+            symbol: upperSymbol,
+          });
+        }
       }
+    } else {
+      fromCache = true;
     }
 
     res.json({
       success: true,
-      data: wallsData,
+      data: wallsData || [],
       count: wallsData?.length || 0,
-      cached: cache.has(cacheKey),
+      cached: fromCache,
+      ...(fromCache && apiError && { warning: 'Using cached data - API is unavailable' }),
     });
   } catch (error) {
     logger.error('Error in getOptionsWalls endpoint', {
@@ -238,7 +358,7 @@ export const getOptionsWalls = async (req: Request, res: Response) => {
     });
     res.status(500).json({
       success: false,
-      error: 'Failed to fetch Options Walls data',
+      error: 'Internal server error processing Options Walls request',
     });
   }
 };
@@ -247,6 +367,8 @@ export const getOptionsWalls = async (req: Request, res: Response) => {
  * GET /api/market/volume-oi/:symbol
  * Get Volume and Open Interest data
  * Cached for 5 minutes per symbol
+ *
+ * Error Recovery: Real API → Cached data → Error response
  */
 export const getVolumeAndOI = async (req: Request, res: Response) => {
   try {
@@ -264,25 +386,51 @@ export const getVolumeAndOI = async (req: Request, res: Response) => {
 
     // Check cache first
     let voiData = cache.get<VolumeOIData[]>(cacheKey);
+    let fromCache = false;
+    let apiError: Error | null = null;
 
     if (!voiData) {
       // Cache miss - fetch from API with deduplication
-      const { dedup } = await import('../utils/requestDedup.js');
-      voiData = await dedup.execute(`volumeoi:${cacheKey}`, async () => {
-        return await flashAlphaClient.getVolumeAndOI(upperSymbol);
-      });
+      try {
+        const { dedup } = await import('../utils/requestDedup.js');
+        voiData = await dedup.execute(`volumeoi:${cacheKey}`, async () => {
+          return await flashAlphaClient.getVolumeAndOI(upperSymbol);
+        });
 
-      if (voiData) {
-        // Store in cache for 5 minutes (300 seconds)
-        cache.set(cacheKey, voiData, 300);
+        if (voiData) {
+          // Store in cache for 5 minutes (300 seconds)
+          cache.set(cacheKey, voiData, 300);
+          logger.debug('Volume/OI data fetched from FlashAlpha', {
+            symbol: upperSymbol,
+            count: voiData.length,
+          });
+        }
+      } catch (error) {
+        apiError = error instanceof Error ? error : new Error(String(error));
+        logger.warn('FlashAlpha Volume/OI call failed', {
+          symbol: upperSymbol,
+          error: apiError.message,
+        });
+
+        // Try to get cached data (ignore TTL)
+        voiData = cache.get<VolumeOIData[]>(cacheKey, true);
+        if (voiData) {
+          fromCache = true;
+          logger.info('Using stale cached Volume/OI data', {
+            symbol: upperSymbol,
+          });
+        }
       }
+    } else {
+      fromCache = true;
     }
 
     res.json({
       success: true,
-      data: voiData,
+      data: voiData || [],
       count: voiData?.length || 0,
-      cached: cache.has(cacheKey),
+      cached: fromCache,
+      ...(fromCache && apiError && { warning: 'Using cached data - API is unavailable' }),
     });
   } catch (error) {
     logger.error('Error in getVolumeAndOI endpoint', {
@@ -291,7 +439,7 @@ export const getVolumeAndOI = async (req: Request, res: Response) => {
     });
     res.status(500).json({
       success: false,
-      error: 'Failed to fetch Volume/OI data',
+      error: 'Internal server error processing Volume/OI request',
     });
   }
 };
@@ -309,6 +457,11 @@ export const getVolumeAndOI = async (req: Request, res: Response) => {
  *   Example: ?strikeRange=25 returns ATM ± 25%
  *
  * Default behavior: ATM ± 20% (reduces 100+ rows to 10-20 rows = 80-90% reduction)
+ *
+ * Error Recovery Strategy:
+ * Tier 1: Real API Call (FlashAlpha)
+ * Tier 2: Cached Data (5min old is acceptable)
+ * Tier 3: Error response with status 503 (Service Unavailable)
  */
 export const getMarketData = async (req: Request, res: Response) => {
   try {
@@ -346,18 +499,40 @@ export const getMarketData = async (req: Request, res: Response) => {
     const { dedup } = await import('../utils/requestDedup.js');
     let marketData = cache.get<typeof flashAlphaClient.getMarketData extends (...args: any[]) => Promise<infer R> ? R : never>(cacheKey);
     let fromCache = false;
+    let apiError: Error | null = null;
 
     if (!marketData) {
-      // Cache miss - fetch from API with deduplication
-      const freshData = await dedup.execute(cacheKey, async () => {
-        return await flashAlphaClient.getMarketData(upperSymbol);
-      });
+      // Cache miss - fetch from API with deduplication (Tier 1)
+      try {
+        const freshData = await dedup.execute(cacheKey, async () => {
+          return await flashAlphaClient.getMarketData(upperSymbol);
+        });
 
-      marketData = freshData as any;
+        marketData = freshData as any;
 
-      if (marketData) {
-        // Store in cache for 5 minutes (300 seconds)
-        cache.set(cacheKey, marketData, 300);
+        if (marketData) {
+          // Store in cache for 5 minutes (300 seconds)
+          cache.set(cacheKey, marketData, 300);
+          logger.info('Market data fetched from FlashAlpha', {
+            symbol: upperSymbol,
+          });
+        }
+      } catch (error) {
+        // API call failed - try to use cached data even if stale
+        apiError = error instanceof Error ? error : new Error(String(error));
+        logger.warn('FlashAlpha API call failed, checking for cached data', {
+          symbol: upperSymbol,
+          error: apiError.message,
+        });
+
+        // Try to get ANY cached data for this symbol (ignore TTL)
+        marketData = cache.get<any>(`market:${upperSymbol}:all*`, true);
+        if (marketData) {
+          fromCache = true;
+          logger.info('Using stale cached market data', {
+            symbol: upperSymbol,
+          });
+        }
       }
     } else {
       fromCache = true;
@@ -404,11 +579,19 @@ export const getMarketData = async (req: Request, res: Response) => {
           timestamp: new Date().toISOString(),
         },
         cached: fromCache,
+        ...(fromCache && apiError && { warning: 'Using cached data - API is unavailable' }),
       });
     } else {
-      res.status(500).json({
+      // No data available (Tier 3)
+      logger.error('No market data available', {
+        symbol: upperSymbol,
+        apiError: apiError?.message,
+      });
+
+      res.status(503).json({
         success: false,
-        error: 'Failed to fetch market data',
+        error: 'FlashAlpha API unavailable and no cached data available',
+        ...(apiError && { details: apiError.message }),
       });
     }
   } catch (error) {
@@ -420,7 +603,7 @@ export const getMarketData = async (req: Request, res: Response) => {
     });
     res.status(500).json({
       success: false,
-      error: 'Failed to fetch market data',
+      error: 'Internal server error processing market data request',
     });
   }
 };

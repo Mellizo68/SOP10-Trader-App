@@ -41,8 +41,10 @@ export class CacheManager {
 
   /**
    * Get value from cache if not expired
+   * @param key - Cache key
+   * @param ignoreTTL - If true, returns stale data (used for fallback on API errors)
    */
-  get<T>(key: string): T | null {
+  get<T>(key: string, ignoreTTL: boolean = false): T | null {
     const entry = this.cache.get(key);
 
     if (!entry) {
@@ -50,8 +52,8 @@ export class CacheManager {
       return null;
     }
 
-    // Check if entry has expired
-    if (entry.expiry < Date.now()) {
+    // Check if entry has expired (unless ignoreTTL is set)
+    if (!ignoreTTL && entry.expiry < Date.now()) {
       this.cache.delete(key);
       this.stats.misses++;
       return null;
@@ -60,6 +62,10 @@ export class CacheManager {
     // Update hit count and return
     entry.hits++;
     this.stats.hits++;
+    logger.debug('Cache GET', {
+      key,
+      stale: ignoreTTL && entry.expiry < Date.now(),
+    });
     return entry.data as T;
   }
 

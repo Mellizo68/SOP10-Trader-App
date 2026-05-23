@@ -1,9 +1,13 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { RefreshCw } from 'lucide-react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { RefreshCw, ChevronDown } from 'lucide-react';
 import { useMarketData } from '../../hooks/useMarketData';
+import { useSymbolDiscovery } from '../../hooks/useSymbolDiscovery';
+import { useExpirations } from '../../hooks/useExpirations';
 import { GEXCard } from './GEXCard';
 import { GreeksTable } from './GreeksTable';
 import { VirtualizedTable } from '../VirtualizedTable';
+import { HistoricalGreeksChart } from './HistoricalGreeksChart';
+import { BacktestForm } from './BacktestForm';
 
 interface MarketAnalysisTabProps {
   symbol?: string;
@@ -29,6 +33,21 @@ const MarketAnalysisTabComponent: React.FC<MarketAnalysisTabProps> = ({
   // Debounced symbol (updates after 300ms of no input changes)
   const [debouncedSymbol, setDebouncedSymbol] = useState(symbol);
 
+  // Symbol discovery for autocomplete
+  const [showSymbolSuggestions, setShowSymbolSuggestions] = useState(false);
+  const symbolDiscovery = useSymbolDiscovery(currentSymbol);
+
+  // Expiration selector
+  const [selectedExpiration, setSelectedExpiration] = useState<string | null>(null);
+  const expirations = useExpirations(debouncedSymbol);
+  const [showExpirationDropdown, setShowExpirationDropdown] = useState(false);
+
+  // View tabs
+  const [activeTab, setActiveTab] = useState<'realtime' | 'historical' | 'backtest'>('realtime');
+
+  // Historical view state
+  const [historicalStrike, setHistoricalStrike] = useState<number>(100);
+
   // Strike filtering options (Sprint 2: Payload Filtering)
   const [strikeRange, setStrikeRange] = useState<number>(20); // Default: ATM ± 20%
   const [useCustomRange, setUseCustomRange] = useState(false);
@@ -38,10 +57,13 @@ const MarketAnalysisTabComponent: React.FC<MarketAnalysisTabProps> = ({
   // Debounce timer reference
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Build filter options based on selection
-  const filterOptions = useCustomRange
-    ? { strikeMin: customMin, strikeMax: customMax }
-    : { strikeRange: strikeRange };
+  // Build filter options based on selection (memoized to prevent unnecessary re-fetches)
+  const filterOptions = useMemo(
+    () => (useCustomRange
+      ? { strikeMin: customMin, strikeMax: customMax }
+      : { strikeRange: strikeRange }),
+    [useCustomRange, customMin, customMax, strikeRange]
+  );
 
   // Fetch data using debounced symbol with strike filters
   const { data, loading, error, lastUpdated, refetch } = useMarketData(
@@ -68,6 +90,11 @@ const MarketAnalysisTabComponent: React.FC<MarketAnalysisTabProps> = ({
     }, 300);
   };
 
+  const handleSymbolFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+    // Select all text when input is focused so typing replaces the entire value
+    e.target.select();
+  };
+
   // Cleanup debounce timer on unmount
   useEffect(() => {
     return () => {
@@ -83,6 +110,42 @@ const MarketAnalysisTabComponent: React.FC<MarketAnalysisTabProps> = ({
 
   return (
     <div className="space-y-4">
+      {/* Tab Navigation */}
+      <div className="flex gap-2 bg-white p-2 rounded-lg border border-gray-200">
+        <button
+          onClick={() => setActiveTab('realtime')}
+          className={`flex-1 px-4 py-2 rounded font-semibold transition-colors ${
+            activeTab === 'realtime'
+              ? 'bg-blue-500 text-white'
+              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+          }`}
+        >
+          📊 Real-Time
+        </button>
+        <button
+          onClick={() => setActiveTab('historical')}
+          className={`flex-1 px-4 py-2 rounded font-semibold transition-colors ${
+            activeTab === 'historical'
+              ? 'bg-blue-500 text-white'
+              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+          }`}
+        >
+          📈 Historical
+        </button>
+        <button
+          onClick={() => setActiveTab('backtest')}
+          className={`flex-1 px-4 py-2 rounded font-semibold transition-colors ${
+            activeTab === 'backtest'
+              ? 'bg-blue-500 text-white'
+              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+          }`}
+        >
+          🔄 Backtest
+        </button>
+      </div>
+
+      {activeTab === 'realtime' && (
+        <>
       {/* Header with Symbol Input and Refresh */}
       <div className="space-y-3 bg-white p-4 rounded-lg border border-gray-200">
         <div className="flex items-center gap-3">
@@ -90,13 +153,40 @@ const MarketAnalysisTabComponent: React.FC<MarketAnalysisTabProps> = ({
             <label className="text-sm font-semibold text-gray-700 block mb-2">
               📊 Symbol
             </label>
-            <input
-              type="text"
-              value={currentSymbol}
-              onChange={handleSymbolChange}
-              placeholder="Enter symbol (e.g., SPY, QQQ, TSLA)"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+            <div className="relative">
+              <input
+                type="text"
+                value={currentSymbol}
+                onChange={handleSymbolChange}
+                onFocus={() => {
+                  handleSymbolFocus({ target: { select: () => {} } } as any);
+                  setShowSymbolSuggestions(true);
+                }}
+                onBlur={() => setTimeout(() => setShowSymbolSuggestions(false), 200)}
+                placeholder="Enter symbol (e.g., SPY, QQQ, TSLA)"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 font-semibold text-lg"
+              />
+
+              {/* Symbol Suggestions Dropdown */}
+              {showSymbolSuggestions && symbolDiscovery.symbols.length > 0 && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-10 max-h-48 overflow-y-auto">
+                  {symbolDiscovery.symbols.slice(0, 10).map(sym => (
+                    <button
+                      key={sym}
+                      onClick={() => {
+                        setCurrentSymbol(sym);
+                        setDebouncedSymbol(sym);
+                        setShowSymbolSuggestions(false);
+                        onSymbolChange?.(sym);
+                      }}
+                      className="w-full text-left px-4 py-2 hover:bg-blue-50 text-gray-900 border-b border-gray-200 last:border-b-0"
+                    >
+                      {sym}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
           <button
@@ -371,6 +461,83 @@ const MarketAnalysisTabComponent: React.FC<MarketAnalysisTabProps> = ({
           </div>
           <p className="text-gray-600 text-sm mt-2">Fetching market data...</p>
         </div>
+      )}
+        </>
+      )}
+
+      {activeTab === 'historical' && (
+        <>
+          {/* Expiration Selector */}
+          {expirations.expirations.length > 0 && (
+            <div className="bg-white p-4 rounded-lg border border-gray-200">
+              <label className="text-sm font-semibold text-gray-700 block mb-2">
+                📅 Select Expiration
+              </label>
+              <div className="relative">
+                <button
+                  onClick={() => setShowExpirationDropdown(!showExpirationDropdown)}
+                  className="w-full flex items-center justify-between px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-900 font-semibold"
+                >
+                  <span>{selectedExpiration || 'Choose expiration...'}</span>
+                  <ChevronDown size={18} />
+                </button>
+
+                {showExpirationDropdown && (
+                  <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-10 max-h-48 overflow-y-auto">
+                    {expirations.expirations.map(exp => (
+                      <button
+                        key={exp}
+                        onClick={() => {
+                          setSelectedExpiration(exp);
+                          setShowExpirationDropdown(false);
+                        }}
+                        className="w-full text-left px-4 py-2 hover:bg-blue-50 text-gray-900 border-b border-gray-200 last:border-b-0"
+                      >
+                        {exp}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Strike Price Input for Historical */}
+          <div className="bg-white p-4 rounded-lg border border-gray-200">
+            <label className="text-sm font-semibold text-gray-700 block mb-2">
+              Strike Price
+            </label>
+            <input
+              type="number"
+              value={historicalStrike}
+              onChange={e => setHistoricalStrike(parseFloat(e.target.value) || 100)}
+              step="1"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+            />
+          </div>
+
+          {/* Historical Chart */}
+          {selectedExpiration && debouncedSymbol && (
+            <HistoricalGreeksChart
+              data={[]}
+              loading={false}
+              error={null}
+              symbol={debouncedSymbol}
+              strike={historicalStrike}
+              expiration={selectedExpiration}
+            />
+          )}
+
+          {!selectedExpiration && (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+              <p className="text-yellow-700">Select an expiration date to view historical Greeks</p>
+            </div>
+          )}
+        </>
+      )}
+
+      {activeTab === 'backtest' && (
+        <BacktestForm symbol={debouncedSymbol} />
       )}
     </div>
   );

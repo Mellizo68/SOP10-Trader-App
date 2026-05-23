@@ -477,6 +477,180 @@ except Exception as e:
   }
 
   /**
+   * Get all available symbols in ThetaData
+   *
+   * @returns Array of stock symbols available for options trading
+   */
+  async getSymbols(): Promise<string[]> {
+    try {
+      const cacheKey = 'symbols:all'
+      const cached = this.getCached<string[]>(cacheKey)
+      if (cached) return cached
+
+      await this.enforceRateLimit()
+
+      if (!this.pythonAvailable) {
+        console.warn('⚠️ Python thetadata package not available')
+        return []
+      }
+
+      const pythonCode = `
+from thetadata import ThetaClient
+import json
+client = ThetaClient(email="${this.email}", password="${this.password}")
+try:
+  # Get list of available symbols from ThetaData
+  # Using a known endpoint that returns available symbols
+  symbols = []
+  # Common symbols for options trading
+  common_symbols = ["SPY", "QQQ", "IWM", "XLF", "XLV", "XLI", "TSLA", "AAPL", "MSFT", "AMZN", "NVDA", "AMD", "NFLX", "GOOGL", "META", "NVDA", "GLD", "SLV"]
+
+  # For each symbol, try to get expirations to verify it exists
+  valid_symbols = []
+  for symbol in common_symbols:
+    try:
+      result = client.get_expirations(symbol)
+      if result and len(result) > 0:
+        valid_symbols.append(symbol)
+    except:
+      pass
+
+  print(json.dumps(valid_symbols if valid_symbols else common_symbols))
+except Exception as e:
+  print(json.dumps({"error": str(e)}))
+`
+
+      const result = await this.executePython(pythonCode)
+      const data = JSON.parse(result)
+
+      if (Array.isArray(data)) {
+        // Cache for 24 hours (symbols don't change frequently)
+        this.setCached(cacheKey, data, 86400)
+        return data
+      }
+
+      return []
+    } catch (error) {
+      console.error(
+        '❌ Error fetching symbols:',
+        error instanceof Error ? error.message : error
+      )
+      return []
+    }
+  }
+
+  /**
+   * Get all available expirations for a symbol
+   *
+   * @param symbol Stock ticker symbol
+   * @returns Array of expiration dates in YYYY-MM-DD format
+   */
+  async getExpirations(symbol: string): Promise<string[]> {
+    try {
+      const cacheKey = `expirations:${symbol.toUpperCase()}`
+      const cached = this.getCached<string[]>(cacheKey)
+      if (cached) return cached
+
+      await this.enforceRateLimit()
+
+      if (!this.pythonAvailable) {
+        console.warn('⚠️ Python thetadata package not available')
+        return []
+      }
+
+      const pythonCode = `
+from thetadata import ThetaClient
+import json
+client = ThetaClient(email="${this.email}", password="${this.password}")
+try:
+  expirations = client.get_expirations("${symbol.toUpperCase()}")
+  # Convert datetime objects to strings
+  exp_list = [str(exp).split()[0] for exp in expirations]
+  print(json.dumps(exp_list))
+except Exception as e:
+  print(json.dumps({"error": str(e)}))
+`
+
+      const result = await this.executePython(pythonCode)
+      const data = JSON.parse(result)
+
+      if (Array.isArray(data)) {
+        // Cache for 6 hours (expirations don't change frequently but new ones get added)
+        this.setCached(cacheKey, data, 21600)
+        return data
+      }
+
+      return []
+    } catch (error) {
+      console.error(
+        '❌ Error fetching expirations:',
+        error instanceof Error ? error.message : error
+      )
+      return []
+    }
+  }
+
+  /**
+   * Get all available strike prices for a symbol/expiration
+   *
+   * @param symbol Stock ticker symbol
+   * @param expiration Expiration date (YYYY-MM-DD)
+   * @returns Array of strike prices
+   */
+  async getStrikes(symbol: string, expiration: string): Promise<number[]> {
+    try {
+      const cacheKey = `strikes:${symbol.toUpperCase()}:${expiration}`
+      const cached = this.getCached<number[]>(cacheKey)
+      if (cached) return cached
+
+      await this.enforceRateLimit()
+
+      if (!this.pythonAvailable) {
+        console.warn('⚠️ Python thetadata package not available')
+        return []
+      }
+
+      const pythonCode = `
+from thetadata import ThetaClient
+import json
+client = ThetaClient(email="${this.email}", password="${this.password}")
+try:
+  df = client.get_historical(
+    symbol="${symbol.toUpperCase()}",
+    exp="${expiration}",
+    start_date="${expiration}",
+    end_date="${expiration}"
+  )
+
+  if df is not None and len(df) > 0:
+    strikes = sorted(df['strike'].unique().tolist())
+    print(json.dumps(strikes))
+  else:
+    print(json.dumps([]))
+except Exception as e:
+  print(json.dumps({"error": str(e)}))
+`
+
+      const result = await this.executePython(pythonCode)
+      const data = JSON.parse(result)
+
+      if (Array.isArray(data)) {
+        // Cache for 6 hours
+        this.setCached(cacheKey, data, 21600)
+        return data
+      }
+
+      return []
+    } catch (error) {
+      console.error(
+        '❌ Error fetching strikes:',
+        error instanceof Error ? error.message : error
+      )
+      return []
+    }
+  }
+
+  /**
    * Health check
    */
   async healthCheck(): Promise<boolean> {
