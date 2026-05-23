@@ -1,186 +1,202 @@
 # Deployment Guide - SOP10 Trader App
 
-## Pre-Deployment Checklist
+## 📋 Overview
 
-- [ ] Environment variables configured (`.env.local`)
-- [ ] Production build passes (`npm run build`)
-- [ ] Backend build passes (`cd backend && npm run build`)
-- [ ] All tests passing
-- [ ] No console.log debug statements
-- [ ] API endpoints tested in production mode
-- [ ] Git changes committed
+The SOP10 Trader App uses a **two-service deployment architecture**:
 
-## Deploying to Vercel
+1. **Frontend** → Vercel (React + TypeScript + Vite)
+2. **Backend** → Render (Node.js + Express)
+
+This provides optimal performance, scalability, and cost efficiency.
+
+## 🚀 Quick Start
 
 ### Prerequisites
-```bash
-npm install -g vercel
-```
+- Vercel account (https://vercel.com)
+- Render account (https://render.com)
+- GitHub repository access
+- API keys for FlashAlpha and ThetaData
 
-### Step 1: Prepare Repository
+### Current Status
+
+✅ **Frontend**: Deployed to Vercel at https://sop10-trader-app.vercel.app
+
+⏳ **Backend**: Needs deployment to Render
+
+## 📦 Frontend Deployment (Vercel)
+
+### Already Completed ✅
+
+The frontend is already deployed to Vercel:
+- URL: https://sop10-trader-app.vercel.app
+- Build: Automatic on git push to main
+- Status: Ready
+
+### Subsequent Deployments
+
 ```bash
-# Ensure everything is committed
-git add .
-git commit -m "Prepare for production deployment"
+# Deploy with git push (auto-deploys)
 git push origin main
+
+# Or manual deployment
+npx vercel --prod
 ```
 
-### Step 2: Deploy Frontend + Backend
-```bash
-# One-time setup (if first time deploying)
-vercel
+## 🔧 Backend Deployment (Render)
 
-# Subsequent deployments
-vercel --prod
+The backend still needs to be deployed. Follow the **complete guide** in:
+
+📄 **[BACKEND_DEPLOYMENT.md](./BACKEND_DEPLOYMENT.md)**
+
+Quick steps:
+1. Create Render service from GitHub repo
+2. Set backend root directory to `backend/`
+3. Configure environment variables
+4. Deploy
+5. Update frontend VITE_API_URL to point to Render backend
+
+## 📊 Environment Variables
+
+### Frontend (Vercel)
+
+In Vercel Dashboard → Environment Variables:
 ```
-
-### Step 3: Configure Environment Variables
-
-In Vercel Dashboard:
-1. Go to Project Settings → Environment Variables
-2. Add for **Production** environment:
-   - `VITE_API_URL` = `https://your-domain.vercel.app/api`
-   - `FLASH_ALPHA_API_KEY` = your_key
-   - `THETA_DATA_API_KEY` = your_key
-   - `NODE_ENV` = `production`
-   - `PORT` = `8080`
-
-### Step 4: Configure Build Settings
-
-In Vercel Dashboard → Project Settings → Build & Development:
-- **Build Command**: `npm run build && cd backend && npm run build`
-- **Output Directory**: `dist`
-- **Install Command**: `npm install && cd backend && npm install && cd ..`
-
-### Step 5: Deploy
-```bash
-vercel --prod
-```
-
-## Monitoring Post-Deployment
-
-### Check Deployment Status
-```bash
-vercel ls               # List deployments
-vercel status          # Current status
-vercel logs            # View logs
-```
-
-### Verify Endpoints
-```bash
-# Test API endpoints
-curl https://your-domain.vercel.app/health
-curl https://your-domain.vercel.app/api/symbols
-curl https://your-domain.vercel.app/api/backtest/strategies
-```
-
-### Monitor Errors
-- Check Vercel dashboard for build/deployment errors
-- Check logs for runtime errors
-- Monitor Sentry if configured
-
-## Environment Variables for Production
-
-### Frontend (`.env.local`)
-```
-VITE_API_URL=https://your-domain.vercel.app/api
+VITE_API_URL=https://sop10-trader-backend.onrender.com/api
 VITE_LOG_LEVEL=warn
 VITE_SENTRY_DSN=https://your-sentry-dsn@sentry.io/project-id
 ```
 
-### Backend
-Set in Vercel Environment Variables:
-- `NODE_ENV=production`
-- `PORT=8080`
-- `LOG_LEVEL=info`
-- `FLASH_ALPHA_API_KEY=xxxxx`
-- `THETA_DATA_API_KEY=xxxxx`
-- `DB_HOST=your-db-host` (if using DB)
-- `SENTRY_DSN=https://your-sentry-dsn@sentry.io/project-id`
+### Backend (Render)
 
-## Troubleshooting
-
-### Build Fails
-1. Check Vercel build logs
-2. Verify all environment variables are set
-3. Test locally: `npm run build`
-4. Check for TypeScript errors: `npx tsc --noEmit`
-
-### API Returns 404
-1. Verify environment variables are set correctly
-2. Check backend build: `cd backend && npm run build`
-3. Verify routes are registered in `backend/src/server.ts`
-
-### Frontend Can't Connect to API
-1. Verify `VITE_API_URL` is correct in Vercel
-2. Check CORS settings in backend
-3. Verify frontend is making requests to `/api/*`
-
-### Slow Performance
-1. Check API response times
-2. Enable caching for API responses
-3. Monitor bundle size in Vercel dashboard
-4. Review CloudFlare settings if using CDN
-
-## Rollback
-
-If deployment has issues:
-
-```bash
-# List previous deployments
-vercel ls
-
-# Rollback to previous deployment
-vercel rollback <deployment-url>
-
-# Or deploy again with fixes
-git fix-issue && git push && vercel --prod
+In Render Dashboard → Environment:
+```
+NODE_ENV=production
+PORT=8080
+LOG_LEVEL=info
+FLASH_ALPHA_API_KEY=your_flash_alpha_key
+THETA_DATA_API_KEY=your_theta_data_key
+VITE_API_URL=https://sop10-trader-app.vercel.app/api
+SENTRY_DSN=https://your-sentry-dsn@sentry.io/project-id
 ```
 
-## Database Migration (if using PostgreSQL)
+## ✅ Verification
 
-For production database:
+### Test Frontend
+
 ```bash
-cd backend
-npm run migrate
+curl https://sop10-trader-app.vercel.app
+# Should return HTML with React app
 ```
 
-## Performance Optimization
+### Test Backend (after deployment)
+
+```bash
+# Health check
+curl https://sop10-trader-backend.onrender.com/health
+
+# Get symbols
+curl https://sop10-trader-backend.onrender.com/api/symbols?search=SPY
+
+# Get strategies
+curl https://sop10-trader-backend.onrender.com/api/backtest/strategies
+```
+
+## 🔄 Monitoring
+
+### Vercel (Frontend)
+
+1. Dashboard: https://vercel.com/dashboard
+2. View deployments, build logs, analytics
+3. Set up alerts for deployment failures
+
+### Render (Backend)
+
+1. Dashboard: https://dashboard.render.com
+2. View service logs, CPU/memory usage
+3. Configure alerts and notifications
+
+## 🐛 Troubleshooting
+
+### Frontend can't connect to API
+
+1. Check `VITE_API_URL` is set correctly in Vercel
+2. Verify backend is running on Render
+3. Check CORS settings in backend
+4. Use browser DevTools to see actual request URL
+
+### Backend deployment fails
+
+See [BACKEND_DEPLOYMENT.md](./BACKEND_DEPLOYMENT.md#troubleshooting)
+
+### API returns 404
+
+1. Verify VITE_API_URL ends with `/api`
+2. Check frontend is making requests to correct path
+3. Verify backend routes are registered
+
+## 🔄 Updating Deployments
+
+### Frontend Updates
+
+```bash
+# Make changes and push
+git commit -am "Update feature"
+git push origin main
+# Auto-deploys to Vercel
+```
+
+### Backend Updates
+
+```bash
+# Make changes to backend/
+git commit -am "Update API"
+git push origin main
+# Auto-deploys to Render
+```
+
+## 📈 Performance Optimization
 
 ### Frontend
-- Enable gzip compression (default in Vercel)
-- Tree-shake unused code (Vite does this)
-- Monitor bundle size
+- ✅ Gzip compression (Vercel default)
+- ✅ Tree-shaking (Vite default)
+- ✅ Code splitting by route
+- Monitor bundle size in Vercel dashboard
 
 ### Backend
-- Use compression middleware (enabled)
-- Enable caching for API responses
-- Monitor database query performance
+- ✅ Response caching (5-min TTL)
+- ✅ Compression middleware enabled
+- ✅ Error tracking via Sentry
+- Monitor response times in Render logs
 
-## Security Best Practices
+## 🔐 Security
 
-1. **Environment Variables**: Never commit `.env` files
-2. **API Keys**: Use Vercel secrets for sensitive data
-3. **CORS**: Restrict to known origins
-4. **Logging**: Use structured logging (Winston)
-5. **Updates**: Keep dependencies updated
+✅ Environment variables secure (not in code)
+✅ API keys stored in Render secrets
+✅ HTTPS enforced (automatic)
+✅ CORS configured
+✅ Error logging enabled
+✅ Rate limiting enabled
 
-## Monitoring & Alerts
+## 💰 Cost
 
-### Recommended Setup
-1. Sentry for error tracking
-2. Vercel Analytics for performance
-3. CloudFlare for DDoS protection
-4. LogRocket for session replay (optional)
+### Vercel (Frontend)
+- Free tier: Unlimited deployments, good for this use case
+- Hobby: $20/month (if needed)
 
-## Support
+### Render (Backend)
+- Free tier: 100 service hours/month, auto-sleep
+- Pro: $12/month for dedicated resources
 
-For deployment issues:
-- Check Vercel documentation: https://vercel.com/docs
-- Check Sentry dashboard for errors
-- Review backend logs: `vercel logs`
+## 📚 Resources
+
+- [Vercel Docs](https://vercel.com/docs)
+- [Render Docs](https://render.com/docs)
+- [Backend Deployment Guide](./BACKEND_DEPLOYMENT.md)
+- [README](./README.md)
 
 ---
 
+**Frontend Status**: ✅ Deployed
+**Backend Status**: ⏳ Pending
 **Last Updated**: May 23, 2026
-**Version**: 1.0.0
+**Version**: 2.0.0
