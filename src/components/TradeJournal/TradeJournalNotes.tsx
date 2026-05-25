@@ -75,7 +75,7 @@ export const TradeJournalNotes: React.FC<TradeJournalNotesProps> = ({
       const updatedSections = await Promise.all(
         sections.map(async (section) => {
           const entries = await apiClient.getJournals(tradeId, 100)
-          const sectionEntries = entries.filter((e: any) => e.section_type === section.type)
+          const sectionEntries = entries.filter((e: any) => e.sectionType === section.type)
           return {
             ...section,
             entries: sectionEntries,
