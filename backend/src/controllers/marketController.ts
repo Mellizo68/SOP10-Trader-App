@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { flashAlphaClient, GEXData, GreeksData, GammaFlipData, OptionsWallsData, VolumeOIData } from '../api/flashalpha-client';
-import { thetaDataClient } from '../api/thetadata-client';
+// TODO: Phase 9 - ThetaData client integration
+// import { thetaDataClient } from '../api/thetadata-client';
 import logger from '../utils/logger';
 import { cache } from '../utils/cache';
 //import { dedup } from '../utils/requestDedup';// import { dedup } from '../utils/requestDedup';
@@ -772,36 +773,11 @@ export const getHistoricalOptions = async (req: Request, res: Response) => {
       });
     }
 
-    // Fetch from ThetaData
-    const data = await thetaDataClient.getHistoricalOptions(
-      upperSymbol,
-      startDate as string,
-      endDate as string,
-      strike ? parseInt(strike as string) : undefined,
-      expiration as string,
-      optionType as 'call' | 'put' | undefined
-    );
-
-    if (!data || data.length === 0) {
-      return res.status(503).json({
-        success: false,
-        error: 'No historical data available',
-      });
-    }
-
-    // Cache for 24 hours
-    cache.set(cacheKey, data, 86400000);
-
-    logger.debug('Historical options fetched', {
-      symbol,
-      expiration,
-      count: data.length,
-    });
-
-    res.json({
-      success: true,
-      data,
-      cached: false,
+    // TODO: Phase 9 - ThetaData API integration
+    return res.status(501).json({
+      success: false,
+      error: 'Historical options are under development (Phase 9). Requires ThetaData API integration.',
+      code: 501,
     });
   } catch (error) {
     logger.error('Error fetching historical options', {
@@ -848,32 +824,11 @@ export const getVolatility = async (req: Request, res: Response) => {
       });
     }
 
-    // Fetch from ThetaData
-    const data = await thetaDataClient.getVolatility(
-      upperSymbol,
-      startDate as string | undefined,
-      endDate as string | undefined
-    );
-
-    if (!data || data.length === 0) {
-      return res.status(503).json({
-        success: false,
-        error: 'No volatility data available',
-      });
-    }
-
-    // Cache for 1 hour
-    cache.set(cacheKey, data, 3600000);
-
-    logger.debug('Volatility data fetched', {
-      symbol,
-      count: data.length,
-    });
-
-    res.json({
-      success: true,
-      data,
-      cached: false,
+    // TODO: Phase 9 - ThetaData API integration
+    return res.status(501).json({
+      success: false,
+      error: 'Volatility data is under development (Phase 9). Requires ThetaData API integration.',
+      code: 501,
     });
   } catch (error) {
     logger.error('Error fetching volatility data', {
@@ -925,29 +880,10 @@ export const getOptionsChain = async (req: Request, res: Response) => {
       });
     }
 
-    // Fetch from ThetaData
-    const data = await thetaDataClient.getOptionsChain(upperSymbol, expiration);
-
-    if (!data || data.length === 0) {
-      return res.status(503).json({
-        success: false,
-        error: 'No chain data available',
-      });
-    }
-
-    // Cache for 30 minutes
-    cache.set(cacheKey, data, 1800000);
-
-    logger.debug('Options chain fetched', {
-      symbol,
-      expiration,
-      count: data.length,
-    });
-
-    res.json({
-      success: true,
-      data,
-      cached: false,
+    // ThetaData integration pending (Phase 9)
+    res.status(501).json({
+      success: false,
+      error: 'Options chain endpoint not yet implemented',
     });
   } catch (error) {
     logger.error('Error fetching options chain', {
