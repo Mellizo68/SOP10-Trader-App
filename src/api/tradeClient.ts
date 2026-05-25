@@ -48,6 +48,20 @@ export class TradeAPIClient {
   }
 
   /**
+   * Map journal entry from API snake_case to camelCase
+   */
+  private mapJournalFields(apiJournal: any): any {
+    return {
+      id: apiJournal.id,
+      tradeId: apiJournal.trade_id,
+      content: apiJournal.content,
+      sectionType: apiJournal.section_type,
+      createdAt: new Date(apiJournal.created_at),
+      updatedAt: new Date(apiJournal.updated_at),
+    }
+  }
+
+  /**
    * Check if API is available
    */
   private async isOnline(): Promise<boolean> {
@@ -557,13 +571,6 @@ export class TradeAPIClient {
     data: { content: string; section_type: 'setup' | 'execution' | 'review' | 'lesson' }
   ): Promise<any> {
     try {
-      const isOnline = await this.isOnline()
-
-      if (!isOnline) {
-        console.warn('API offline: Journal entry will sync when online')
-        return { ...data, id: `journal_${Date.now()}`, trade_id: tradeId, created_at: new Date(), updated_at: new Date() }
-      }
-
       const response = await fetch(`${this.baseURL}/trades/${tradeId}/journals`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -573,7 +580,7 @@ export class TradeAPIClient {
       if (!response.ok) throw new Error('Failed to create journal entry')
 
       const result = await response.json()
-      return result.data
+      return this.mapJournalFields(result.data)
     } catch (error) {
       console.error('Error creating journal entry:', error)
       throw error
@@ -600,7 +607,8 @@ export class TradeAPIClient {
         console.warn('Journal API returned unsuccessful response:', data)
         return []
       }
-      return data.data || []
+      const journals = data.data || []
+      return journals.map((journal: any) => this.mapJournalFields(journal))
     } catch (error) {
       console.error('Error fetching journal entries:', error)
       return []
@@ -613,12 +621,6 @@ export class TradeAPIClient {
    */
   async getJournal(tradeId: string, journalId: string): Promise<any | null> {
     try {
-      const isOnline = await this.isOnline()
-
-      if (!isOnline) {
-        return null
-      }
-
       const response = await fetch(`${this.baseURL}/trades/${tradeId}/journals/${journalId}`, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' }
@@ -627,7 +629,8 @@ export class TradeAPIClient {
       if (!response.ok) return null
 
       const data = await response.json()
-      return data.data || null
+      if (!data.data) return null
+      return this.mapJournalFields(data.data)
     } catch (error) {
       console.error('Error fetching journal entry:', error)
       return null
@@ -644,13 +647,6 @@ export class TradeAPIClient {
     data: Partial<{ content: string; section_type: 'setup' | 'execution' | 'review' | 'lesson' }>
   ): Promise<any | null> {
     try {
-      const isOnline = await this.isOnline()
-
-      if (!isOnline) {
-        console.warn('API offline: Journal update will sync when online')
-        return null
-      }
-
       const response = await fetch(`${this.baseURL}/trades/${tradeId}/journals/${journalId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -660,7 +656,7 @@ export class TradeAPIClient {
       if (!response.ok) throw new Error('Failed to update journal entry')
 
       const result = await response.json()
-      return result.data || null
+      return result.data ? this.mapJournalFields(result.data) : null
     } catch (error) {
       console.error('Error updating journal entry:', error)
       throw error
