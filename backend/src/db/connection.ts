@@ -19,12 +19,15 @@ const { Pool } = pkg;
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL || 'postgresql://trader:tradersecret@localhost:5432/sop10_trader',
-  
+
   // Connection pool configuration
   max: parseInt(process.env.DB_POOL_MAX || '20', 10),              // Maximum concurrent connections
   min: parseInt(process.env.DB_POOL_MIN || '2', 10),              // Minimum connections to maintain
   idleTimeoutMillis: parseInt(process.env.DB_IDLE_TIMEOUT || '30000', 10),  // 30s idle timeout
   connectionTimeoutMillis: parseInt(process.env.DB_CONNECTION_TIMEOUT || '2000', 10),  // 2s timeout
+
+  // SSL/TLS configuration for Render's managed PostgreSQL
+  ssl: { rejectUnauthorized: false },
 
   // Application name for monitoring
   application_name: `sop10-trader-${process.env.NODE_ENV || 'development'}`,
