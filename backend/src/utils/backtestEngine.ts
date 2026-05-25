@@ -1,5 +1,19 @@
-import { HistoricalOptionsData } from '../../../mcp-server-bebeto/dist/utils/types.js'
+// import { HistoricalOptionsData } from '../../../mcp-server-bebeto/dist/utils/types.js' // TODO: Phase 9 - ThetaData integration
 import { getStrategy, StrategyDefinition, calculatePnL } from './strategyLib.js'
+
+// Placeholder type for Phase 9 integration
+interface HistoricalOptionsData {
+  date: string
+  symbol: string
+  expiration: string
+  strike: number
+  callPrice: number
+  putPrice: number
+  callDelta: number
+  putDelta: number
+  callGamma: number
+  putGamma: number
+}
 
 /**
  * Trade record in a backtest
@@ -92,85 +106,8 @@ export class BacktestEngine {
         }
       }
 
-      // Simulate backtest with available data
-      const trades: BacktestTrade[] = []
-      const pnlCurve: { date: string; cumulativePnL: number }[] = []
-
-      // For now, create a simple backtest result
-      // In production, this would analyze historical data and generate trades
-      let cumulativePnL = 0
-
-      // Calculate average prices for each strike
-      const strikePrices = Object.keys(historicalData)
-      if (strikePrices.length === 0) {
-        return {
-          backtestId,
-          symbol,
-          strategy: strategyName,
-          strategyDefinition: strategy,
-          entryDate,
-          exitDate,
-          status: 'completed',
-          trades: [],
-          metrics: getEmptyMetrics(),
-          pnlCurve: [],
-          createdAt: new Date().toISOString(),
-        }
-      }
-
-      // Simulate entry on first date
-      const entryData: { [strikePrice: number]: number } = {}
-      const exitData: { [strikePrice: number]: number } = {}
-
-      for (const strikeKey of strikePrices) {
-        const data = historicalData[strikeKey]
-        if (data && data.length > 0) {
-          const strikePrice = data[0].strike
-          const entryPrice = data[0].close
-          const exitPrice = data[data.length - 1].close
-
-          entryData[strikePrice] = entryPrice
-          exitData[strikePrice] = exitPrice
-        }
-      }
-
-      // Calculate strategy P&L
-      if (Object.keys(entryData).length > 0) {
-        const atmPrice = Math.min(...Object.keys(entryData).map(Number)) || 100
-        const premiums = entryData
-        const exitPremiums = exitData
-
-        const entryPnL = calculatePnL(strategy, atmPrice, premiums, atmPrice)
-        const exitPnL = calculatePnL(strategy, atmPrice, exitPremiums, atmPrice)
-        const pnl = exitPnL - entryPnL
-
-        if (pnl !== 0) {
-          const daysHeld = 1 // Simplified
-          trades.push({
-            entryDate,
-            entryPrice: entryPnL,
-            entryLegPrices: entryData,
-            exitDate,
-            exitPrice: exitPnL,
-            exitLegPrices: exitData,
-            pnl,
-            pnlPercent: (pnl / Math.abs(entryPnL)) * 100,
-            daysHeld,
-            status: pnl > 0 ? 'winner' : pnl < 0 ? 'loser' : 'breakeven',
-          })
-
-          cumulativePnL += pnl
-        }
-      }
-
-      pnlCurve.push({
-        date: exitDate,
-        cumulativePnL,
-      })
-
-      // Calculate metrics
-      const metrics = calculateMetrics(trades)
-
+      // TODO: Phase 9 - Full backtest simulation requires ThetaData historical data
+      // For now, return empty backtest result
       return {
         backtestId,
         symbol,
@@ -179,9 +116,9 @@ export class BacktestEngine {
         entryDate,
         exitDate,
         status: 'completed',
-        trades,
-        metrics,
-        pnlCurve,
+        trades: [],
+        metrics: getEmptyMetrics(),
+        pnlCurve: [],
         createdAt: new Date().toISOString(),
       }
     } catch (error) {

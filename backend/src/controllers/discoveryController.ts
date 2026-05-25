@@ -1,28 +1,16 @@
 import { Request, Response } from 'express'
-import { thetaDataClient } from '../../../mcp-server-bebeto/dist/clients/theta-data-client.js'
 import logger from '../utils/logger.js'
 
 /**
  * Get all available symbols for options trading
+ * TODO: Phase 9 - Requires ThetaData API integration
  */
 export async function getSymbols(req: Request, res: Response): Promise<void> {
   try {
-    const query = (req.query.q as string) || ''
-
-    logger.info('Discovery: Getting available symbols', { query })
-
-    const symbols = await thetaDataClient.getSymbols()
-
-    // Filter by query if provided
-    const filtered = query
-      ? symbols.filter((s: string) => s.toUpperCase().includes(query.toUpperCase()))
-      : symbols
-
-    res.json({
-      success: true,
-      data: filtered,
-      total: filtered.length,
-      timestamp: new Date().toISOString(),
+    res.status(501).json({
+      success: false,
+      error: 'Symbol discovery is under development (Phase 9). Requires ThetaData API integration.',
+      code: 501,
     })
   } catch (error) {
     logger.error('Error getting symbols:', error)
@@ -34,30 +22,15 @@ export async function getSymbols(req: Request, res: Response): Promise<void> {
 }
 
 /**
- * Get all expirations for a symbol
+ * Get available expirations for a symbol
+ * TODO: Phase 9 - Requires ThetaData API integration
  */
 export async function getExpirations(req: Request, res: Response): Promise<void> {
   try {
-    const { symbol } = req.params
-
-    if (!symbol) {
-      res.status(400).json({
-        success: false,
-        error: 'Symbol parameter required',
-      })
-      return
-    }
-
-    logger.info('Discovery: Getting expirations', { symbol })
-
-    const expirations = await thetaDataClient.getExpirations(symbol)
-
-    res.json({
-      success: true,
-      symbol: symbol.toUpperCase(),
-      data: expirations,
-      total: expirations.length,
-      timestamp: new Date().toISOString(),
+    res.status(501).json({
+      success: false,
+      error: 'Expiration discovery is under development (Phase 9). Requires ThetaData API integration.',
+      code: 501,
     })
   } catch (error) {
     logger.error('Error getting expirations:', error)
@@ -69,31 +42,15 @@ export async function getExpirations(req: Request, res: Response): Promise<void>
 }
 
 /**
- * Get all strikes for a symbol/expiration
+ * Get available strikes for a symbol and expiration
+ * TODO: Phase 9 - Requires ThetaData API integration
  */
 export async function getStrikes(req: Request, res: Response): Promise<void> {
   try {
-    const { symbol, expiration } = req.params
-
-    if (!symbol || !expiration) {
-      res.status(400).json({
-        success: false,
-        error: 'Symbol and expiration parameters required',
-      })
-      return
-    }
-
-    logger.info('Discovery: Getting strikes', { symbol, expiration })
-
-    const strikes = await thetaDataClient.getStrikes(symbol, expiration)
-
-    res.json({
-      success: true,
-      symbol: symbol.toUpperCase(),
-      expiration,
-      data: strikes,
-      total: strikes.length,
-      timestamp: new Date().toISOString(),
+    res.status(501).json({
+      success: false,
+      error: 'Strike discovery is under development (Phase 9). Requires ThetaData API integration.',
+      code: 501,
     })
   } catch (error) {
     logger.error('Error getting strikes:', error)
@@ -105,32 +62,35 @@ export async function getStrikes(req: Request, res: Response): Promise<void> {
 }
 
 /**
- * Get full options chain (calls and puts) for a symbol/expiration
+ * Get available option types (calls, puts) for a strike
+ * TODO: Phase 9 - Requires ThetaData API integration
+ */
+export async function getOptionTypes(req: Request, res: Response): Promise<void> {
+  try {
+    res.status(501).json({
+      success: false,
+      error: 'Option type discovery is under development (Phase 9). Requires ThetaData API integration.',
+      code: 501,
+    })
+  } catch (error) {
+    logger.error('Error getting option types:', error)
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to get option types',
+    })
+  }
+}
+
+/**
+ * Get options chain for a symbol and expiration
+ * TODO: Phase 9 - Requires ThetaData API integration
  */
 export async function getOptionsChain(req: Request, res: Response): Promise<void> {
   try {
-    const { symbol, expiration } = req.params
-
-    if (!symbol || !expiration) {
-      res.status(400).json({
-        success: false,
-        error: 'Symbol and expiration parameters required',
-      })
-      return
-    }
-
-    logger.info('Discovery: Getting options chain', { symbol, expiration })
-
-    const chain = await thetaDataClient.getOptionsChain(symbol, expiration)
-
-    res.json({
-      success: true,
-      symbol: symbol.toUpperCase(),
-      expiration,
-      calls: chain.calls || [],
-      puts: chain.puts || [],
-      totalStrikes: (chain.calls?.length || 0) + (chain.puts?.length || 0),
-      timestamp: new Date().toISOString(),
+    res.status(501).json({
+      success: false,
+      error: 'Options chain is under development (Phase 9). Requires ThetaData API integration.',
+      code: 501,
     })
   } catch (error) {
     logger.error('Error getting options chain:', error)
