@@ -203,8 +203,8 @@ const TradeDetailModal: React.FC<TradeDetailModalProps> = ({ trade, onClose }) =
                   </div>
                   <div>
                     <p className="text-gray-400 text-sm">Return %</p>
-                    <p className={`text-xl font-bold ${calculatedPercent! >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                      {calculatedPercent! >= 0 ? '+' : ''}{calculatedPercent!.toFixed(2)}%
+                    <p className={`text-xl font-bold ${calculatedPercent ? (calculatedPercent >= 0 ? 'text-emerald-400' : 'text-red-400') : 'text-gray-400'}`}>
+                      {calculatedPercent ? `${calculatedPercent >= 0 ? '+' : ''}${calculatedPercent.toFixed(2)}%` : '-'}
                     </p>
                   </div>
                   <div>
