@@ -14,6 +14,39 @@ export class TradeAPIClient {
   }
 
   /**
+   * Transform API response fields from snake_case to camelCase
+   * API returns: entry_price, exit_price, date_entry, etc.
+   * Components expect: entryPrice, exitPrice, dateEntry, etc.
+   */
+  private mapTradeFields(apiTrade: any): TradeEntry {
+    return {
+      id: apiTrade.id,
+      entryNumber: apiTrade.entry_number,
+      dateEntry: new Date(apiTrade.date_entry),
+      symbol: apiTrade.symbol,
+      strategy: apiTrade.strategy,
+      strikePrice: apiTrade.strike_price,
+      delta: apiTrade.delta,
+      daysToExpiration: apiTrade.days_to_expiration,
+      ivPercent: apiTrade.iv_percent,
+      gexStatus: apiTrade.gex_status,
+      pvpStatus: apiTrade.pvp_status,
+      vwapStatus: apiTrade.vwap_status,
+      confluenceScore: apiTrade.confluence_score,
+      entryPrice: apiTrade.entry_price,
+      takeProfit: apiTrade.take_profit,
+      stopLoss: apiTrade.stop_loss,
+      status: apiTrade.status,
+      exitPrice: apiTrade.exit_price,
+      exitDate: apiTrade.exit_date ? new Date(apiTrade.exit_date) : undefined,
+      profitLoss: apiTrade.profit_loss,
+      percentReturn: apiTrade.percent_return,
+      comments: apiTrade.comments || '',
+      screenshots: []
+    }
+  }
+
+  /**
    * Check if API is available
    */
   private async isOnline(): Promise<boolean> {
@@ -56,7 +89,10 @@ export class TradeAPIClient {
       if (!response.ok) throw new Error('Failed to fetch trades')
 
       const data = await response.json()
-      const trades = data.data || []
+      const apiTrades = data.data || []
+
+      // Map snake_case API fields to camelCase
+      const trades = apiTrades.map((trade: any) => this.mapTradeFields(trade))
 
       // Update local cache
       this.updateTradeCache(trades)
@@ -87,7 +123,11 @@ export class TradeAPIClient {
       if (!response.ok) return null
 
       const data = await response.json()
-      return data.data || null
+      const apiTrade = data.data
+      if (!apiTrade) return null
+
+      // Map snake_case API fields to camelCase
+      return this.mapTradeFields(apiTrade)
     } catch (error) {
       console.error('Error fetching trade:', error)
       return this.getTradeFromCache(id)
@@ -114,7 +154,10 @@ export class TradeAPIClient {
       if (!response.ok) throw new Error('Failed to create trade')
 
       const result = await response.json()
-      const trade = result.data
+      const apiTrade = result.data
+
+      // Map snake_case API fields to camelCase
+      const trade = this.mapTradeFields(apiTrade)
 
       // Update cache
       const trades = this.getTradesFromCache()
@@ -151,7 +194,10 @@ export class TradeAPIClient {
       if (!response.ok) return null
 
       const result = await response.json()
-      const trade = result.data
+      const apiTrade = result.data
+
+      // Map snake_case API fields to camelCase
+      const trade = this.mapTradeFields(apiTrade)
 
       // Update cache
       const trades = this.getTradesFromCache()
@@ -183,15 +229,18 @@ export class TradeAPIClient {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          exitPrice,
-          exitDate: exitDate.toISOString()
+          exit_price: exitPrice,
+          exit_date: exitDate.toISOString()
         })
       })
 
       if (!response.ok) return null
 
       const result = await response.json()
-      const trade = result.data
+      const apiTrade = result.data
+
+      // Map snake_case API fields to camelCase
+      const trade = this.mapTradeFields(apiTrade)
 
       // Update cache
       const trades = this.getTradesFromCache()
