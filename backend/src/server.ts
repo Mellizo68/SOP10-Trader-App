@@ -1,4 +1,125 @@
+async function initializeDatabase() {
+  // Initialize database schema before starting server
+  console.log('🔄 Initializing database...')
+
+  try {
+    const pkg = await import('pg')
+    const { Pool } = pkg.default
+
+    const pool = new Pool({
+      connectionString: process.env.DATABASE_URL || 'postgresql://trader:tradersecret@localhost:5432/sop10_trader',
+    })
+
+    const client = await pool.connect()
+
+    // Create trades table
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS trades (
+        id VARCHAR(255) PRIMARY KEY,
+        entry_number INTEGER UNIQUE NOT NULL,
+        date_entry DATE NOT NULL DEFAULT CURRENT_DATE,
+        symbol VARCHAR(20) NOT NULL,
+        strategy VARCHAR(100),
+        strike_price NUMERIC(10, 2),
+        delta NUMERIC(5, 3),
+        days_to_expiration INTEGER,
+        iv_percent NUMERIC(5, 2),
+        gex_status VARCHAR(50),
+        pvp_status VARCHAR(50),
+        vwap_status VARCHAR(50),
+        confluence_score INTEGER,
+        entry_price NUMERIC(12, 2) NOT NULL,
+        take_profit NUMERIC(12, 2),
+        stop_loss NUMERIC(12, 2),
+        status VARCHAR(20) NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'closed')),
+        exit_price NUMERIC(12, 2),
+        exit_date DATE,
+        profit_loss NUMERIC(12, 2),
+        percent_return NUMERIC(8, 4),
+        comments TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `)
+
+    // Add journal_count column if it doesn't exist
+    await client.query(`
+      ALTER TABLE trades
+      ADD COLUMN IF NOT EXISTS journal_count INTEGER DEFAULT 0;
+    `)
+
+    // Create trade_journals table
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS trade_journals (
+        id VARCHAR(255) PRIMARY KEY,
+        trade_id VARCHAR(255) NOT NULL,
+        content TEXT NOT NULL,
+        section_type VARCHAR(50) NOT NULL CHECK (section_type IN ('setup', 'execution', 'review', 'lesson')),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (trade_id) REFERENCES trades(id) ON DELETE CASCADE
+      );
+    `)
+
+    // Create trade_media table
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS trade_media (
+        id VARCHAR(255) PRIMARY KEY,
+        trade_id VARCHAR(255) NOT NULL,
+        media_type VARCHAR(50) NOT NULL,
+        file_name VARCHAR(255) NOT NULL,
+        file_size INTEGER NOT NULL,
+        file_path VARCHAR(500) NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (trade_id) REFERENCES trades(id) ON DELETE CASCADE
+      );
+    `)
+
+    // Add has_media column if it doesn't exist
+    await client.query(`
+      ALTER TABLE trades
+      ADD COLUMN IF NOT EXISTS has_media BOOLEAN DEFAULT FALSE;
+    `)
+
+    // Create indices
+    const createIndicesSQL = `
+      CREATE INDEX IF NOT EXISTS idx_trades_status ON trades(status);
+      CREATE INDEX IF NOT EXISTS idx_trades_symbol ON trades(symbol);
+      CREATE INDEX IF NOT EXISTS idx_trades_date_entry ON trades(date_entry);
+      CREATE INDEX IF NOT EXISTS idx_trades_created ON trades(created_at);
+      CREATE INDEX IF NOT EXISTS idx_trades_profit_loss ON trades(profit_loss);
+      CREATE INDEX IF NOT EXISTS idx_trades_win_loss ON trades(profit_loss) WHERE status = 'closed';
+      CREATE INDEX IF NOT EXISTS idx_journals_trade_id ON trade_journals(trade_id);
+      CREATE INDEX IF NOT EXISTS idx_journals_created ON trade_journals(created_at);
+      CREATE INDEX IF NOT EXISTS idx_media_trade_id ON trade_media(trade_id);
+      CREATE INDEX IF NOT EXISTS idx_media_created ON trade_media(created_at);
+      CREATE INDEX IF NOT EXISTS idx_trades_has_media ON trades(has_media);
+    `
+
+    const statements = createIndicesSQL.split(';').filter((s: string) => s.trim())
+    for (const statement of statements) {
+      await client.query(statement)
+    }
+
+    client.release()
+    await pool.end()
+
+    console.log('✅ Database initialized successfully')
+  } catch (error) {
+    console.error('❌ Database initialization failed:', error instanceof Error ? error.message : error)
+    throw error
+  }
+}
+
 async function startServer() {
+  // Initialize database first
+  try {
+    await initializeDatabase()
+  } catch (error) {
+    console.error('Failed to initialize database, exiting:', error)
+    process.exit(1)
+  }
+
   // Import EVERYTHING inside the function - nothing at module level
   const express = (await import('express')).default
   const cors = (await import('cors')).default
