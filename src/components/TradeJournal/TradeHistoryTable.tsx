@@ -304,11 +304,13 @@ const TradeHistoryTableComponent: React.FC<TradeHistoryTableProps> = ({ trades, 
                           </td>
                           <td className="py-3 px-4 text-center">
                             <span className={`inline-block px-2 py-1 rounded text-xs font-semibold ${
-                              trade.confluenceScore >= 80 ? 'bg-emerald-900/50 text-emerald-400' :
-                              trade.confluenceScore >= 65 ? 'bg-yellow-900/50 text-yellow-400' :
-                              'bg-red-900/50 text-red-400'
+                              trade.confluenceScore ? (
+                                trade.confluenceScore >= 80 ? 'bg-emerald-900/50 text-emerald-400' :
+                                trade.confluenceScore >= 65 ? 'bg-yellow-900/50 text-yellow-400' :
+                                'bg-red-900/50 text-red-400'
+                              ) : 'bg-gray-900/50 text-gray-400'
                             }`}>
-                              {trade.confluenceScore}
+                              {trade.confluenceScore ?? 'N/A'}
                             </span>
                           </td>
                           <td className="py-3 px-4 text-center">
