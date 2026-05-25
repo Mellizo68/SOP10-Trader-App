@@ -47,12 +47,12 @@ import { ApiError } from '../middleware/errorHandler';
  */
 export const getTrades = async (req: Request, res: Response) => {
   try {
-    // Validate pagination and filter parameters
-    validatePaginationFilter(req.query);
-
-    // Parse pagination parameters
+    // Parse pagination parameters FIRST (convert strings to numbers)
     const limit = Math.min(Math.max(parseInt(req.query.limit as string) || 50, 1), 500);
     const offset = Math.max(parseInt(req.query.offset as string) || 0, 0);
+
+    // Validate pagination and filter parameters (with converted numbers)
+    validatePaginationFilter({ ...req.query, limit, offset });
 
     // Parse filter parameters
     const filters = {
