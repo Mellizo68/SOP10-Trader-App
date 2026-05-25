@@ -17,6 +17,7 @@ export class TradeAPIClient {
    * Transform API response fields from snake_case to camelCase
    * API returns: entry_price, exit_price, date_entry, etc.
    * Components expect: entryPrice, exitPrice, dateEntry, etc.
+   * Also converts string numbers to actual numbers for numeric fields
    */
   private mapTradeFields(apiTrade: any): TradeEntry {
     return {
@@ -25,22 +26,22 @@ export class TradeAPIClient {
       dateEntry: new Date(apiTrade.date_entry),
       symbol: apiTrade.symbol,
       strategy: apiTrade.strategy,
-      strikePrice: apiTrade.strike_price,
-      delta: apiTrade.delta,
-      daysToExpiration: apiTrade.days_to_expiration,
-      ivPercent: apiTrade.iv_percent,
+      strikePrice: apiTrade.strike_price ? parseFloat(apiTrade.strike_price) : null,
+      delta: apiTrade.delta ? parseFloat(apiTrade.delta) : null,
+      daysToExpiration: apiTrade.days_to_expiration ? parseInt(apiTrade.days_to_expiration, 10) : null,
+      ivPercent: apiTrade.iv_percent ? parseFloat(apiTrade.iv_percent) : null,
       gexStatus: apiTrade.gex_status,
       pvpStatus: apiTrade.pvp_status,
       vwapStatus: apiTrade.vwap_status,
-      confluenceScore: apiTrade.confluence_score,
-      entryPrice: apiTrade.entry_price,
-      takeProfit: apiTrade.take_profit,
-      stopLoss: apiTrade.stop_loss,
+      confluenceScore: apiTrade.confluence_score ? parseInt(apiTrade.confluence_score, 10) : null,
+      entryPrice: apiTrade.entry_price ? parseFloat(apiTrade.entry_price) : 0,
+      takeProfit: apiTrade.take_profit ? parseFloat(apiTrade.take_profit) : null,
+      stopLoss: apiTrade.stop_loss ? parseFloat(apiTrade.stop_loss) : null,
       status: apiTrade.status,
-      exitPrice: apiTrade.exit_price,
+      exitPrice: apiTrade.exit_price ? parseFloat(apiTrade.exit_price) : undefined,
       exitDate: apiTrade.exit_date ? new Date(apiTrade.exit_date) : undefined,
-      profitLoss: apiTrade.profit_loss,
-      percentReturn: apiTrade.percent_return,
+      profitLoss: apiTrade.profit_loss ? parseFloat(apiTrade.profit_loss) : undefined,
+      percentReturn: apiTrade.percent_return ? parseFloat(apiTrade.percent_return) : undefined,
       comments: apiTrade.comments || '',
       screenshots: []
     }
