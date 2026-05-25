@@ -13,6 +13,7 @@ async function initializeDatabase() {
     const pool = new Pool({
       connectionString,
       connectionTimeoutMillis: 5000, // 5 second timeout for initial connection
+      ssl: { rejectUnauthorized: false }, // Required for Render's managed PostgreSQL
     })
 
     let client
