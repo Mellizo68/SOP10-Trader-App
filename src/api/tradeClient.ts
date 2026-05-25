@@ -586,12 +586,6 @@ export class TradeAPIClient {
    */
   async getJournals(tradeId: string, limit: number = 50, offset: number = 0): Promise<any[]> {
     try {
-      const isOnline = await this.isOnline()
-
-      if (!isOnline) {
-        return []
-      }
-
       const params = new URLSearchParams({ limit: limit.toString(), offset: offset.toString() })
 
       const response = await fetch(`${this.baseURL}/trades/${tradeId}/journals?${params}`, {
@@ -599,9 +593,13 @@ export class TradeAPIClient {
         headers: { 'Content-Type': 'application/json' }
       })
 
-      if (!response.ok) throw new Error('Failed to fetch journal entries')
+      if (!response.ok) throw new Error(`Failed to fetch journal entries: ${response.status}`)
 
       const data = await response.json()
+      if (!data.success) {
+        console.warn('Journal API returned unsuccessful response:', data)
+        return []
+      }
       return data.data || []
     } catch (error) {
       console.error('Error fetching journal entries:', error)
