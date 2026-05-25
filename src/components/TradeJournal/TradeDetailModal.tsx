@@ -3,6 +3,7 @@ import { TradeEntry, MediaEntry } from '../../types'
 import { TradeJournalService } from '../../services/tradeJournalService'
 import { X, CheckCircle } from 'lucide-react'
 import { MediaUploadDropzone, MediaGallery } from '../Media'
+import { TradeJournalNotes } from './TradeJournalNotes'
 import { apiClient } from '../../api/tradeClient'
 
 interface TradeDetailModalProps {
@@ -297,6 +298,14 @@ const TradeDetailModal: React.FC<TradeDetailModalProps> = ({ trade, onClose }) =
               />
             </div>
           )}
+        </div>
+
+        {/* Trade Journals Section */}
+        <div className="mb-6">
+          <TradeJournalNotes
+            tradeId={trade.id}
+            tradeSymbol={trade.symbol}
+          />
         </div>
 
         {/* Close Button */}
