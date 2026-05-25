@@ -91,7 +91,7 @@ const TradeDetailModal: React.FC<TradeDetailModalProps> = ({ trade, onClose }) =
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-2xl font-bold text-white">
-            {trade.symbol} - {trade.strategy.replace(/_/g, ' ')}
+            {trade.symbol} - {trade.strategy ? trade.strategy.replace(/_/g, ' ') : 'N/A'}
           </h2>
           <button
             onClick={onClose}
@@ -143,7 +143,7 @@ const TradeDetailModal: React.FC<TradeDetailModalProps> = ({ trade, onClose }) =
             <div>
               <p className="text-gray-400 text-sm">GEX Status</p>
               <p className={`font-semibold ${trade.gexStatus === 'positivo' ? 'text-emerald-400' : 'text-red-400'}`}>
-                {trade.gexStatus.charAt(0).toUpperCase() + trade.gexStatus.slice(1)}
+                {trade.gexStatus ? (trade.gexStatus.charAt(0).toUpperCase() + trade.gexStatus.slice(1)) : 'N/A'}
               </p>
             </div>
           </div>
