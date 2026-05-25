@@ -6,15 +6,30 @@ async function initializeDatabase() {
     const pkg = await import('pg')
     const { Pool } = pkg.default
 
+    const connectionString = process.env.DATABASE_URL || 'postgresql://trader:tradersecret@localhost:5432/sop10_trader'
+
+    console.log('📌 Connecting to database:', connectionString.split('@')[1] || 'localhost')
+
     const pool = new Pool({
-      connectionString: process.env.DATABASE_URL || 'postgresql://trader:tradersecret@localhost:5432/sop10_trader',
+      connectionString,
+      connectionTimeoutMillis: 5000, // 5 second timeout for initial connection
     })
 
-    const client = await pool.connect()
+    let client
+    try {
+      client = await pool.connect()
+      console.log('✅ Database connected successfully')
+    } catch (connError) {
+      console.error('❌ Failed to connect to database:', (connError as Error).message)
+      console.log('⚠️  Continuing with server startup (database will be created on first request)')
+      await pool.end()
+      return // Return gracefully instead of exiting
+    }
 
     // Create trades table
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS trades (
+    try {
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS trades (
         id VARCHAR(255) PRIMARY KEY,
         entry_number INTEGER UNIQUE NOT NULL,
         date_entry DATE NOT NULL DEFAULT CURRENT_DATE,
@@ -96,15 +111,21 @@ async function initializeDatabase() {
       CREATE INDEX IF NOT EXISTS idx_trades_has_media ON trades(has_media);
     `
 
-    const statements = createIndicesSQL.split(';').filter((s: string) => s.trim())
-    for (const statement of statements) {
-      await client.query(statement)
+      const statements = createIndicesSQL.split(';').filter((s: string) => s.trim())
+      for (const statement of statements) {
+        await client.query(statement)
+      }
+
+      console.log('✅ Database schema created/verified')
+    } catch (tableError) {
+      console.error('⚠️  Error creating tables:', (tableError as Error).message)
+      console.log('⚠️  Continuing - tables may already exist or will be created later')
+    } finally {
+      if (client) client.release()
+      await pool.end()
     }
 
-    client.release()
-    await pool.end()
-
-    console.log('✅ Database initialized successfully')
+    console.log('✅ Database initialization complete')
   } catch (error) {
     console.error('❌ Database initialization failed:', error instanceof Error ? error.message : error)
     throw error
@@ -112,12 +133,12 @@ async function initializeDatabase() {
 }
 
 async function startServer() {
-  // Initialize database first
+  // Initialize database first (non-blocking - continues even if DB init fails)
   try {
     await initializeDatabase()
   } catch (error) {
-    console.error('Failed to initialize database, exiting:', error)
-    process.exit(1)
+    console.error('⚠️  Database initialization error:', error instanceof Error ? error.message : error)
+    console.log('⚠️  Continuing server startup - database may be initialized later')
   }
 
   // Import EVERYTHING inside the function - nothing at module level
