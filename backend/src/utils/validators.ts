@@ -149,13 +149,17 @@ export const validateTradeClose = (exitPrice: any, exitDate?: any): void => {
  */
 export const validatePaginationFilter = (params: any): void => {
   if (params.limit !== undefined) {
-    if (typeof params.limit !== 'number' || params.limit < 1 || params.limit > 500) {
+    // Convert string to number if needed (query params come as strings)
+    const limit = typeof params.limit === 'string' ? parseInt(params.limit, 10) : params.limit;
+    if (isNaN(limit) || typeof limit !== 'number' || limit < 1 || limit > 500) {
       throw new ApiError(400, 'Limit must be a number between 1 and 500');
     }
   }
 
   if (params.offset !== undefined) {
-    if (typeof params.offset !== 'number' || params.offset < 0) {
+    // Convert string to number if needed (query params come as strings)
+    const offset = typeof params.offset === 'string' ? parseInt(params.offset, 10) : params.offset;
+    if (isNaN(offset) || typeof offset !== 'number' || offset < 0) {
       throw new ApiError(400, 'Offset must be a non-negative number');
     }
   }
