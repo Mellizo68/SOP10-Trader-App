@@ -33,7 +33,7 @@ const TradeHistoryTableComponent: React.FC<TradeHistoryTableProps> = ({ trades, 
     }
 
     if (filters.strategy) {
-      result = result.filter(t => t.strategy === filters.strategy)
+      result = result.filter(t => t.strategy && t.strategy === filters.strategy)
     }
 
     if (filters.confluenceMin !== undefined) {
@@ -85,7 +85,7 @@ const TradeHistoryTableComponent: React.FC<TradeHistoryTableProps> = ({ trades, 
   }, [filters, sortField, sortOrder, trades])
 
   const strategies = useMemo(() => {
-    return Array.from(new Set(trades.map(t => t.strategy))).sort()
+    return Array.from(new Set(trades.map(t => t.strategy).filter(Boolean))).sort()
   }, [trades])
 
   const handleSort = (field: SortField) => {
@@ -289,7 +289,7 @@ const TradeHistoryTableComponent: React.FC<TradeHistoryTableProps> = ({ trades, 
                             {new Date(trade.dateEntry).toLocaleDateString('es-ES')}
                           </td>
                           <td className="py-3 px-4 text-white font-semibold">{trade.symbol}</td>
-                          <td className="py-3 px-4 text-gray-300">{trade.strategy.replace(/_/g, ' ')}</td>
+                          <td className="py-3 px-4 text-gray-300">{trade.strategy ? trade.strategy.replace(/_/g, ' ') : 'N/A'}</td>
                           <td className="py-3 px-4 text-right text-cyan-400 font-semibold">
                             ${trade.entryPrice.toFixed(2)}
                           </td>
