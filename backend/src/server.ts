@@ -157,7 +157,9 @@ async function startServer() {
   const allowedOrigins = [
     'https://sop10-trader-app.vercel.app',     // Production frontend
     'http://localhost:3000',                    // Local development
+    'http://localhost:3001',                    // Local development (Vite alt port)
     'http://127.0.0.1:3000',                    // Local development alt
+    'http://127.0.0.1:3001',                    // Local development alt port
   ]
 
   app.use(cors({
