@@ -158,8 +158,14 @@ async function startServer() {
     'https://sop10-trader-app.vercel.app',     // Production frontend
     'http://localhost:3000',                    // Local development
     'http://localhost:3001',                    // Local development (Vite alt port)
+    'http://localhost:3002',                    // Local development (Vite alt port 2)
+    'http://localhost:3003',                    // Local development (Vite alt port 3)
+    'http://localhost:3005',                    // Local development (Vite port)
     'http://127.0.0.1:3000',                    // Local development alt
     'http://127.0.0.1:3001',                    // Local development alt port
+    'http://127.0.0.1:3002',                    // Local development alt port 2
+    'http://127.0.0.1:3003',                    // Local development alt port 3
+    'http://127.0.0.1:3005',                    // Local development alt (Vite port)
   ]
 
   app.use(cors({
