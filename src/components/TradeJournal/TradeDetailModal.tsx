@@ -118,27 +118,27 @@ const TradeDetailModal: React.FC<TradeDetailModalProps> = ({ trade, onClose }) =
             </div>
             <div>
               <p className="text-gray-400 text-sm">Strike Price</p>
-              <p className="text-white font-semibold">${trade.strikePrice.toFixed(2)}</p>
+              <p className="text-white font-semibold">{trade.strikePrice ? `$${trade.strikePrice.toFixed(2)}` : 'N/A'}</p>
             </div>
             <div>
               <p className="text-gray-400 text-sm">Entry Price</p>
-              <p className="text-cyan-400 font-semibold">${trade.entryPrice.toFixed(2)}</p>
+              <p className="text-cyan-400 font-semibold">${trade.entryPrice?.toFixed(2) || '0.00'}</p>
             </div>
             <div>
               <p className="text-gray-400 text-sm">Delta</p>
-              <p className="text-white font-semibold">{trade.delta.toFixed(2)}</p>
+              <p className="text-white font-semibold">{trade.delta ? trade.delta.toFixed(2) : 'N/A'}</p>
             </div>
             <div>
               <p className="text-gray-400 text-sm">DTE</p>
-              <p className="text-white font-semibold">{trade.daysToExpiration} días</p>
+              <p className="text-white font-semibold">{trade.daysToExpiration ? `${trade.daysToExpiration} días` : 'N/A'}</p>
             </div>
             <div>
               <p className="text-gray-400 text-sm">IV Percent</p>
-              <p className="text-white font-semibold">{trade.ivPercent.toFixed(2)}%</p>
+              <p className="text-white font-semibold">{trade.ivPercent ? `${trade.ivPercent.toFixed(2)}%` : 'N/A'}</p>
             </div>
             <div>
               <p className="text-gray-400 text-sm">Confluence Score</p>
-              <p className="text-blue-400 font-semibold">{trade.confluenceScore}</p>
+              <p className="text-blue-400 font-semibold">{trade.confluenceScore ?? 'N/A'}</p>
             </div>
             <div>
               <p className="text-gray-400 text-sm">GEX Status</p>
