@@ -7,6 +7,8 @@ import {
   deleteTrade,
   closeTrade,
 } from '../controllers/tradesController';
+import journalsRouter from './journals';
+import mediaRouter from './media';
 
 const router = Router();
 
@@ -90,5 +92,26 @@ router.delete('/:id', deleteTrade);
  * - percent_return = (profit_loss / entry_price) * 100
  */
 router.put('/:id/close', closeTrade);
+
+/**
+ * Mount journals router on /:id/journals
+ * Journals routes:
+ * POST   /api/trades/:id/journals - Create journal entry
+ * GET    /api/trades/:id/journals - List journal entries
+ * GET    /api/trades/:id/journals/:journalId - Get single entry
+ * PUT    /api/trades/:id/journals/:journalId - Update entry
+ * DELETE /api/trades/:id/journals/:journalId - Delete entry
+ */
+router.use('/:id/journals', journalsRouter);
+
+/**
+ * Mount media router on /:id/media
+ * Media routes:
+ * POST   /api/trades/:id/media - Upload media file
+ * GET    /api/trades/:id/media - List media files
+ * DELETE /api/trades/:id/media/:mediaId - Delete media file
+ * GET    /api/trades/:id/media/:mediaId/download - Download media file
+ */
+router.use('/:id/media', mediaRouter);
 
 export default router;

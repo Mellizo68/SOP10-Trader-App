@@ -1,8 +1,10 @@
 import axios, { AxiosInstance } from 'axios';
 import dotenv from 'dotenv';
+import path from 'path';
 import logger from '../utils/logger';
 
-dotenv.config();
+// Load .env from backend directory
+dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
 /**
  * FlashAlpha API Response Types

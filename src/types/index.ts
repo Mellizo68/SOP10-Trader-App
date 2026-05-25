@@ -176,3 +176,107 @@ export interface TradeFilter {
   searchSymbol?: string
   symbolSearch?: string
 }
+
+/**
+ * Journal Entry Type
+ * Stores trade-specific documentation: setup notes, execution analysis, reviews, and lessons
+ */
+export interface JournalEntry {
+  id: string
+  tradeId: string
+  content: string // Markdown content
+  sectionType: 'setup' | 'execution' | 'review' | 'lesson'
+  createdAt: Date
+  updatedAt: Date
+}
+
+/**
+ * Media Entry Type - Phase E: Trade Screenshots & Media Storage
+ * Stores trade media files (screenshots, charts, confirmations)
+ */
+export interface MediaEntry {
+  id: string
+  trade_id: string
+  media_type: string // 'screenshot', 'chart', etc.
+  file_name: string
+  file_size: number // In bytes
+  file_path: string
+  mime_type?: string // 'image/jpeg', 'image/png', etc.
+  s3_key?: string // AWS S3 key if uploaded to S3
+  created_at: Date
+  downloadUrl?: string // URL to download/view the file
+}
+
+/**
+ * Analytics Types - Phase E: Advanced Analytics & Reporting
+ */
+
+/**
+ * Overall Analytics Summary
+ * Aggregate statistics across all closed trades
+ */
+export interface AnalyticsSummary {
+  total_trades: number
+  winning_trades: number
+  losing_trades: number
+  win_rate: number // Percentage 0-100
+  profit_factor: number
+  total_profit_loss: number
+  average_win: number
+  average_loss: number
+  best_trade: number
+  worst_trade: number
+  sharpe_ratio: number
+  max_drawdown: number
+  recovery_factor: number
+  risk_reward_ratio: number
+  win_streak_max: number
+  loss_streak_max: number
+}
+
+/**
+ * Strategy Performance
+ * Performance breakdown by individual strategy
+ */
+export interface StrategyPerformance {
+  strategy: string
+  total_trades: number
+  winning_trades: number
+  losing_trades: number
+  win_rate: number
+  total_profit_loss: number
+  average_trade: number
+  best_trade: number
+  worst_trade: number
+  profit_factor: number
+}
+
+/**
+ * Period Performance
+ * Performance breakdown by time period (month or week)
+ */
+export interface PeriodPerformance {
+  period: string // YYYY-MM format for month, IYYY-IW for week
+  total_trades: number
+  winning_trades: number
+  losing_trades: number
+  win_rate: number
+  profit_loss: number
+  average_trade: number
+}
+
+/**
+ * Win/Loss Statistics
+ * Detailed statistics about winning and losing trades
+ */
+export interface WinLossStats {
+  win_count: number
+  loss_count: number
+  win_rate: number
+  average_win: number
+  average_loss: number
+  winning_ratio: number // Average win / Average loss
+  total_wins: number
+  total_losses: number
+  profit_factor: number
+}

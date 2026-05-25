@@ -94,3 +94,15 @@ export interface TradeFilter {
   startDate?: Date;
   endDate?: Date;
 }
+
+/**
+ * Journal Entry Type
+ */
+export interface JournalEntryType {
+  id: string;
+  tradeId: string;
+  content: string;
+  sectionType: 'setup' | 'execution' | 'review' | 'lesson';
+  createdAt: Date;
+  updatedAt: Date;
+}

@@ -40,11 +40,13 @@ async function startServer() {
   const discoveryRouter = (await import('./routes/discovery.js')).default
   const historicalRouter = (await import('./routes/historical.js')).default
   const backtestingRouter = (await import('./routes/backtesting.js')).default
+  const analyticsRouter = (await import('./routes/analytics.js')).default
 
   // Register routes
   app.use('/api/trades', tradesRouter)
   app.use('/api/market', marketRouter)
   app.use('/api/stats', statsRouter)
+  app.use('/api/analytics', analyticsRouter)
   app.use('/api', discoveryRouter)
   app.use('/api', historicalRouter)
   app.use('/api', backtestingRouter)

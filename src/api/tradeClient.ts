@@ -1,4 +1,4 @@
-import { TradeEntry, Statistics } from '../types'
+import { TradeEntry, Statistics, JournalEntry } from '../types'
 
 const API_BASE_URL = ((import.meta as any).env.VITE_API_URL as string) || 'http://localhost:8080/api'
 
@@ -492,6 +492,438 @@ export class TradeAPIClient {
     const pending = JSON.parse(localStorage.getItem('sop10_pending_syncs') || '[]')
     const trades = this.getTradesFromCache()
     return trades.filter(t => pending.includes(t.id))
+  }
+
+  /**
+   * Journal API Methods - Phase E: Trade Journals & Notes
+   */
+
+  /**
+   * POST /api/trades/:id/journals
+   * Create new journal entry
+   */
+  async createJournal(
+    tradeId: string,
+    data: { content: string; section_type: 'setup' | 'execution' | 'review' | 'lesson' }
+  ): Promise<any> {
+    try {
+      const isOnline = await this.isOnline()
+
+      if (!isOnline) {
+        console.warn('API offline: Journal entry will sync when online')
+        return { ...data, id: `journal_${Date.now()}`, trade_id: tradeId, created_at: new Date(), updated_at: new Date() }
+      }
+
+      const response = await fetch(`${this.baseURL}/trades/${tradeId}/journals`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      })
+
+      if (!response.ok) throw new Error('Failed to create journal entry')
+
+      const result = await response.json()
+      return result.data
+    } catch (error) {
+      console.error('Error creating journal entry:', error)
+      throw error
+    }
+  }
+
+  /**
+   * GET /api/trades/:id/journals
+   * Get all journal entries for a trade
+   */
+  async getJournals(tradeId: string, limit: number = 50, offset: number = 0): Promise<any[]> {
+    try {
+      const isOnline = await this.isOnline()
+
+      if (!isOnline) {
+        return []
+      }
+
+      const params = new URLSearchParams({ limit: limit.toString(), offset: offset.toString() })
+
+      const response = await fetch(`${this.baseURL}/trades/${tradeId}/journals?${params}`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
+      })
+
+      if (!response.ok) throw new Error('Failed to fetch journal entries')
+
+      const data = await response.json()
+      return data.data || []
+    } catch (error) {
+      console.error('Error fetching journal entries:', error)
+      return []
+    }
+  }
+
+  /**
+   * GET /api/trades/:id/journals/:journalId
+   * Get single journal entry
+   */
+  async getJournal(tradeId: string, journalId: string): Promise<any | null> {
+    try {
+      const isOnline = await this.isOnline()
+
+      if (!isOnline) {
+        return null
+      }
+
+      const response = await fetch(`${this.baseURL}/trades/${tradeId}/journals/${journalId}`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
+      })
+
+      if (!response.ok) return null
+
+      const data = await response.json()
+      return data.data || null
+    } catch (error) {
+      console.error('Error fetching journal entry:', error)
+      return null
+    }
+  }
+
+  /**
+   * PUT /api/trades/:id/journals/:journalId
+   * Update journal entry
+   */
+  async updateJournal(
+    tradeId: string,
+    journalId: string,
+    data: Partial<{ content: string; section_type: 'setup' | 'execution' | 'review' | 'lesson' }>
+  ): Promise<any | null> {
+    try {
+      const isOnline = await this.isOnline()
+
+      if (!isOnline) {
+        console.warn('API offline: Journal update will sync when online')
+        return null
+      }
+
+      const response = await fetch(`${this.baseURL}/trades/${tradeId}/journals/${journalId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      })
+
+      if (!response.ok) throw new Error('Failed to update journal entry')
+
+      const result = await response.json()
+      return result.data || null
+    } catch (error) {
+      console.error('Error updating journal entry:', error)
+      throw error
+    }
+  }
+
+  /**
+   * DELETE /api/trades/:id/journals/:journalId
+   * Delete journal entry
+   */
+  async deleteJournal(tradeId: string, journalId: string): Promise<boolean> {
+    try {
+      const isOnline = await this.isOnline()
+
+      if (!isOnline) {
+        console.warn('API offline: Journal deletion will sync when online')
+        return true
+      }
+
+      const response = await fetch(`${this.baseURL}/trades/${tradeId}/journals/${journalId}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' }
+      })
+
+      if (!response.ok) throw new Error('Failed to delete journal entry')
+
+      return true
+    } catch (error) {
+      console.error('Error deleting journal entry:', error)
+      throw error
+    }
+  }
+
+  /**
+   * Analytics Methods - Phase E: Advanced Analytics & Reporting
+   */
+
+  /**
+   * GET /api/analytics/summary
+   * Get overall analytics summary
+   */
+  async getAnalyticsSummary(): Promise<any> {
+    try {
+      const isOnline = await this.isOnline()
+
+      if (!isOnline) {
+        console.warn('API offline: Unable to fetch analytics summary')
+        return null
+      }
+
+      const response = await fetch(`${this.baseURL}/analytics/summary`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
+      })
+
+      if (!response.ok) throw new Error('Failed to fetch analytics summary')
+
+      const data = await response.json()
+      return data.data || null
+    } catch (error) {
+      console.error('Error fetching analytics summary:', error)
+      throw error
+    }
+  }
+
+  /**
+   * GET /api/analytics/by-strategy
+   * Get performance breakdown by strategy
+   */
+  async getAnalyticsByStrategy(): Promise<any[]> {
+    try {
+      const isOnline = await this.isOnline()
+
+      if (!isOnline) {
+        console.warn('API offline: Unable to fetch strategy analytics')
+        return []
+      }
+
+      const response = await fetch(`${this.baseURL}/analytics/by-strategy`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
+      })
+
+      if (!response.ok) throw new Error('Failed to fetch strategy analytics')
+
+      const data = await response.json()
+      return data.data || []
+    } catch (error) {
+      console.error('Error fetching strategy analytics:', error)
+      throw error
+    }
+  }
+
+  /**
+   * GET /api/analytics/by-period
+   * Get performance by period (month or week)
+   */
+  async getAnalyticsByPeriod(periodType: 'month' | 'week' = 'month'): Promise<any[]> {
+    try {
+      const isOnline = await this.isOnline()
+
+      if (!isOnline) {
+        console.warn('API offline: Unable to fetch period analytics')
+        return []
+      }
+
+      const params = new URLSearchParams()
+      params.append('periodType', periodType)
+
+      const response = await fetch(`${this.baseURL}/analytics/by-period?${params}`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
+      })
+
+      if (!response.ok) throw new Error('Failed to fetch period analytics')
+
+      const data = await response.json()
+      return data.data || []
+    } catch (error) {
+      console.error('Error fetching period analytics:', error)
+      throw error
+    }
+  }
+
+  /**
+   * GET /api/analytics/win-loss
+   * Get win/loss statistics and ratios
+   */
+  async getWinLossStats(): Promise<any> {
+    try {
+      const isOnline = await this.isOnline()
+
+      if (!isOnline) {
+        console.warn('API offline: Unable to fetch win/loss statistics')
+        return null
+      }
+
+      const response = await fetch(`${this.baseURL}/analytics/win-loss`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
+      })
+
+      if (!response.ok) throw new Error('Failed to fetch win/loss statistics')
+
+      const data = await response.json()
+      return data.data || null
+    } catch (error) {
+      console.error('Error fetching win/loss statistics:', error)
+      throw error
+    }
+  }
+
+  /**
+   * POST /api/analytics/refresh
+   * Recalculate and refresh analytics metrics
+   */
+  async refreshAnalytics(): Promise<any> {
+    try {
+      const isOnline = await this.isOnline()
+
+      if (!isOnline) {
+        console.warn('API offline: Unable to refresh analytics')
+        return null
+      }
+
+      const response = await fetch(`${this.baseURL}/analytics/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      })
+
+      if (!response.ok) throw new Error('Failed to refresh analytics')
+
+      const data = await response.json()
+      return data.data || null
+    } catch (error) {
+      console.error('Error refreshing analytics:', error)
+      throw error
+    }
+  }
+
+  /**
+   * Media API Methods - Phase E: Trade Screenshots & Media Storage
+   */
+
+  /**
+   * POST /api/trades/:id/media
+   * Upload media file (image) for a trade
+   *
+   * @param tradeId - Trade ID
+   * @param file - File object from file input
+   * @returns Media entry with download URL
+   */
+  async uploadMedia(tradeId: string, file: File): Promise<any> {
+    try {
+      const isOnline = await this.isOnline()
+
+      if (!isOnline) {
+        console.warn('API offline: Media upload will sync when online')
+        return {
+          id: `media_${Date.now()}`,
+          trade_id: tradeId,
+          file_name: file.name,
+          file_size: file.size,
+          mime_type: file.type,
+          created_at: new Date(),
+          downloadUrl: URL.createObjectURL(file)
+        }
+      }
+
+      const formData = new FormData()
+      formData.append('file', file)
+
+      const response = await fetch(`${this.baseURL}/trades/${tradeId}/media`, {
+        method: 'POST',
+        body: formData
+        // Don't set Content-Type header - browser will set it with boundary
+      })
+
+      if (!response.ok) throw new Error('Failed to upload media')
+
+      const result = await response.json()
+      return result.data
+    } catch (error) {
+      console.error('Error uploading media:', error)
+      throw error
+    }
+  }
+
+  /**
+   * GET /api/trades/:id/media
+   * Get all media files for a trade
+   *
+   * @param tradeId - Trade ID
+   * @param limit - Max items per page (default 50)
+   * @param offset - Pagination offset (default 0)
+   * @returns Media entries with download URLs
+   */
+  async getMedia(
+    tradeId: string,
+    limit: number = 50,
+    offset: number = 0
+  ): Promise<{ media: any[]; total: number; pagination: any }> {
+    try {
+      const isOnline = await this.isOnline()
+
+      if (!isOnline) {
+        return { media: [], total: 0, pagination: { limit, offset, total: 0, page: 1, pageCount: 0, hasMore: false, hasPrevious: false } }
+      }
+
+      const params = new URLSearchParams({ limit: limit.toString(), offset: offset.toString() })
+
+      const response = await fetch(`${this.baseURL}/trades/${tradeId}/media?${params}`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
+      })
+
+      if (!response.ok) throw new Error('Failed to fetch media')
+
+      const data = await response.json()
+      return {
+        media: data.data || [],
+        total: data.pagination?.total || 0,
+        pagination: data.pagination || {}
+      }
+    } catch (error) {
+      console.error('Error fetching media:', error)
+      throw error
+    }
+  }
+
+  /**
+   * DELETE /api/trades/:id/media/:mediaId
+   * Delete media file
+   *
+   * @param tradeId - Trade ID
+   * @param mediaId - Media ID
+   * @returns Success status
+   */
+  async deleteMedia(tradeId: string, mediaId: string): Promise<boolean> {
+    try {
+      const isOnline = await this.isOnline()
+
+      if (!isOnline) {
+        console.warn('API offline: Media deletion will sync when online')
+        return true
+      }
+
+      const response = await fetch(`${this.baseURL}/trades/${tradeId}/media/${mediaId}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' }
+      })
+
+      if (!response.ok) throw new Error('Failed to delete media')
+
+      return true
+    } catch (error) {
+      console.error('Error deleting media:', error)
+      throw error
+    }
+  }
+
+  /**
+   * GET /api/trades/:id/media/:mediaId/download
+   * Download or view media file
+   *
+   * @param tradeId - Trade ID
+   * @param mediaId - Media ID
+   * @returns Download URL (can be used as href or img src)
+   */
+  downloadMediaUrl(tradeId: string, mediaId: string): string {
+    return `${this.baseURL}/trades/${tradeId}/media/${mediaId}/download`
   }
 }
 

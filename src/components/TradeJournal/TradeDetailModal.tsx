@@ -1,7 +1,9 @@
-import React, { useState } from 'react'
-import { TradeEntry } from '../../types'
+import React, { useState, useEffect } from 'react'
+import { TradeEntry, MediaEntry } from '../../types'
 import { TradeJournalService } from '../../services/tradeJournalService'
 import { X, CheckCircle } from 'lucide-react'
+import { MediaUploadDropzone, MediaGallery } from '../Media'
+import { apiClient } from '../../api/tradeClient'
 
 interface TradeDetailModalProps {
   trade: TradeEntry
@@ -15,6 +17,27 @@ const TradeDetailModal: React.FC<TradeDetailModalProps> = ({ trade, onClose }) =
   )
   const [closing, setClosing] = useState(false)
   const [message, setMessage] = useState('')
+  const [media, setMedia] = useState<MediaEntry[]>([])
+  const [loadingMedia, setLoadingMedia] = useState(false)
+  const [mediaError, setMediaError] = useState('')
+
+  // Load media files for the trade
+  useEffect(() => {
+    const loadMedia = async () => {
+      try {
+        setLoadingMedia(true)
+        const result = await apiClient.getMedia(trade.id)
+        setMedia(result.media)
+      } catch (error) {
+        console.error('Error loading media:', error)
+        // Don't show error to user, just fail silently
+      } finally {
+        setLoadingMedia(false)
+      }
+    }
+
+    loadMedia()
+  }, [trade.id])
 
   const calculatedPL = exitPrice ? parseFloat(exitPrice) - trade.entryPrice : null
   const calculatedPercent = calculatedPL ? (calculatedPL / trade.entryPrice) * 100 : null
@@ -34,23 +57,31 @@ const TradeDetailModal: React.FC<TradeDetailModalProps> = ({ trade, onClose }) =
         throw new Error('Exit Price debe ser mayor a 0')
       }
 
-      const updatedTrade = TradeJournalService.closeTrade(
-        trade.id,
-        exitPriceNum,
-        new Date(exitDate)
-      )
+      // Call API to close trade
+      await apiClient.closeTrade(trade.id, exitPriceNum, new Date(exitDate))
 
-      if (updatedTrade) {
-        setMessage(`✅ Trade cerrado exitosamente!`)
-        setTimeout(() => {
-          onClose()
-        }, 1500)
-      }
+      setMessage(`✅ Trade cerrado exitosamente!`)
+      setTimeout(() => {
+        onClose()
+      }, 1500)
     } catch (error: any) {
       setMessage(`❌ Error: ${error.message}`)
     } finally {
       setClosing(false)
     }
+  }
+
+  const handleMediaUploaded = (uploadedMedia: MediaEntry) => {
+    setMedia([uploadedMedia, ...media])
+    setMediaError('')
+  }
+
+  const handleMediaDeleted = (mediaId: string) => {
+    setMedia(media.filter(m => m.id !== mediaId))
+  }
+
+  const handleMediaError = (error: string) => {
+    setMediaError(error)
   }
 
   return (
@@ -232,6 +263,41 @@ const TradeDetailModal: React.FC<TradeDetailModalProps> = ({ trade, onClose }) =
             <p className="text-gray-300">{trade.comments}</p>
           </div>
         )}
+
+        {/* Media Section */}
+        <div className="bg-gray-800/30 rounded-lg p-6 mb-6 border border-gray-700/50">
+          <h3 className="text-lg font-semibold text-white mb-4">Trade Media</h3>
+
+          {mediaError && (
+            <div className="bg-red-900/30 border border-red-500/30 text-red-400 text-sm p-3 rounded mb-4">
+              {mediaError}
+            </div>
+          )}
+
+          {/* Upload Section */}
+          <div className="mb-6">
+            <p className="text-gray-400 text-sm mb-3">Upload screenshots or charts for this trade</p>
+            <MediaUploadDropzone
+              tradeId={trade.id}
+              onMediaUploaded={handleMediaUploaded}
+              onError={handleMediaError}
+            />
+          </div>
+
+          {/* Gallery Section */}
+          {media.length > 0 && (
+            <div>
+              <p className="text-gray-400 text-sm mb-3">{media.length} file{media.length !== 1 ? 's' : ''} uploaded</p>
+              <MediaGallery
+                tradeId={trade.id}
+                media={media}
+                onMediaDeleted={handleMediaDeleted}
+                onError={handleMediaError}
+                isLoading={loadingMedia}
+              />
+            </div>
+          )}
+        </div>
 
         {/* Close Button */}
         <button

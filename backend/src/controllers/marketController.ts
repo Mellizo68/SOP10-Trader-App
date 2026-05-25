@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { flashAlphaClient, GEXData, GreeksData, GammaFlipData, OptionsWallsData, VolumeOIData } from '../api/flashalpha-client';
+import { thetaDataClient } from '../api/thetadata-client';
 import logger from '../utils/logger';
 import { cache } from '../utils/cache';
 //import { dedup } from '../utils/requestDedup';// import { dedup } from '../utils/requestDedup';
@@ -720,6 +721,243 @@ export const clearCache = async (req: Request, res: Response) => {
     res.status(500).json({
       success: false,
       error: 'Failed to clear cache',
+    });
+  }
+};
+
+/**
+ * GET /api/market/historical/:symbol
+ * Get historical options data for a symbol
+ * Query params: startDate, endDate, expiration (required), strike, optionType (call|put)
+ *
+ * Example: /api/market/historical/SPY?startDate=2026-05-01&endDate=2026-05-24&expiration=2026-06-20
+ */
+export const getHistoricalOptions = async (req: Request, res: Response) => {
+  try {
+    const { symbol } = req.params;
+    const { startDate, endDate, expiration, strike, optionType } = req.query;
+
+    if (!symbol) {
+      return res.status(400).json({
+        success: false,
+        error: 'Symbol is required',
+      });
+    }
+
+    if (!startDate || !endDate) {
+      return res.status(400).json({
+        success: false,
+        error: 'startDate and endDate are required',
+      });
+    }
+
+    if (!expiration) {
+      return res.status(400).json({
+        success: false,
+        error: 'expiration is required (format: YYYY-MM-DD). Use /api/market/chain/:symbol to see available expirations',
+      });
+    }
+
+    const upperSymbol = symbol.toUpperCase();
+    const cacheKey = `theta:hist:${upperSymbol}:${startDate}:${endDate}:${expiration}:${strike || 'all'}:${optionType || 'all'}`;
+
+    // Check cache first (24 hour TTL for historical)
+    let historicalData = cache.get(cacheKey);
+    if (historicalData) {
+      logger.debug('Historical options from cache', { symbol, expiration });
+      return res.json({
+        success: true,
+        data: historicalData,
+        cached: true,
+      });
+    }
+
+    // Fetch from ThetaData
+    const data = await thetaDataClient.getHistoricalOptions(
+      upperSymbol,
+      startDate as string,
+      endDate as string,
+      strike ? parseInt(strike as string) : undefined,
+      expiration as string,
+      optionType as 'call' | 'put' | undefined
+    );
+
+    if (!data || data.length === 0) {
+      return res.status(503).json({
+        success: false,
+        error: 'No historical data available',
+      });
+    }
+
+    // Cache for 24 hours
+    cache.set(cacheKey, data, 86400000);
+
+    logger.debug('Historical options fetched', {
+      symbol,
+      expiration,
+      count: data.length,
+    });
+
+    res.json({
+      success: true,
+      data,
+      cached: false,
+    });
+  } catch (error) {
+    logger.error('Error fetching historical options', {
+      symbol: req.params.symbol,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    res.status(503).json({
+      success: false,
+      error: 'Failed to fetch historical options',
+    });
+  }
+};
+
+/**
+ * GET /api/market/volatility/:symbol
+ * Get volatility analysis for a symbol
+ * Query params: startDate, endDate
+ *
+ * Example: /api/market/volatility/SPY?startDate=2026-05-01&endDate=2026-05-24
+ */
+export const getVolatility = async (req: Request, res: Response) => {
+  try {
+    const { symbol } = req.params;
+    const { startDate, endDate } = req.query;
+
+    if (!symbol) {
+      return res.status(400).json({
+        success: false,
+        error: 'Symbol is required',
+      });
+    }
+
+    const upperSymbol = symbol.toUpperCase();
+    const cacheKey = `theta:vol:${upperSymbol}:${startDate || 'all'}:${endDate || 'all'}`;
+
+    // Check cache first (1 hour TTL for volatility)
+    let volatilityData = cache.get(cacheKey);
+    if (volatilityData) {
+      logger.debug('Volatility data from cache', { symbol });
+      return res.json({
+        success: true,
+        data: volatilityData,
+        cached: true,
+      });
+    }
+
+    // Fetch from ThetaData
+    const data = await thetaDataClient.getVolatility(
+      upperSymbol,
+      startDate as string | undefined,
+      endDate as string | undefined
+    );
+
+    if (!data || data.length === 0) {
+      return res.status(503).json({
+        success: false,
+        error: 'No volatility data available',
+      });
+    }
+
+    // Cache for 1 hour
+    cache.set(cacheKey, data, 3600000);
+
+    logger.debug('Volatility data fetched', {
+      symbol,
+      count: data.length,
+    });
+
+    res.json({
+      success: true,
+      data,
+      cached: false,
+    });
+  } catch (error) {
+    logger.error('Error fetching volatility data', {
+      symbol: req.params.symbol,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    res.status(503).json({
+      success: false,
+      error: 'Failed to fetch volatility data',
+    });
+  }
+};
+
+/**
+ * GET /api/market/chain/:symbol/:expiration
+ * Get options chain for a specific expiration
+ *
+ * Example: /api/market/chain/SPY/2026-06-20
+ */
+export const getOptionsChain = async (req: Request, res: Response) => {
+  try {
+    const { symbol, expiration } = req.params;
+
+    if (!symbol) {
+      return res.status(400).json({
+        success: false,
+        error: 'Symbol is required',
+      });
+    }
+
+    if (!expiration) {
+      return res.status(400).json({
+        success: false,
+        error: 'Expiration date is required',
+      });
+    }
+
+    const upperSymbol = symbol.toUpperCase();
+    const cacheKey = `theta:chain:${upperSymbol}:${expiration}`;
+
+    // Check cache first (30 minute TTL for chain)
+    let chainData = cache.get(cacheKey);
+    if (chainData) {
+      logger.debug('Options chain from cache', { symbol, expiration });
+      return res.json({
+        success: true,
+        data: chainData,
+        cached: true,
+      });
+    }
+
+    // Fetch from ThetaData
+    const data = await thetaDataClient.getOptionsChain(upperSymbol, expiration);
+
+    if (!data || data.length === 0) {
+      return res.status(503).json({
+        success: false,
+        error: 'No chain data available',
+      });
+    }
+
+    // Cache for 30 minutes
+    cache.set(cacheKey, data, 1800000);
+
+    logger.debug('Options chain fetched', {
+      symbol,
+      expiration,
+      count: data.length,
+    });
+
+    res.json({
+      success: true,
+      data,
+      cached: false,
+    });
+  } catch (error) {
+    logger.error('Error fetching options chain', {
+      symbol: req.params.symbol,
+      expiration: req.params.expiration,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    res.status(503).json({
+      success: false,
+      error: 'Failed to fetch options chain',
     });
   }
 };

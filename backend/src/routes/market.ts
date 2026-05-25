@@ -10,6 +10,9 @@ import {
   getStats,
   getCacheStats,
   clearCache,
+  getHistoricalOptions,
+  getVolatility,
+  getOptionsChain,
 } from '../controllers/marketController';
 
 const router = Router();
@@ -47,5 +50,10 @@ router.get('/volume-oi/:symbol', getVolumeAndOI);
 
 // Combined market data (all data for a symbol)
 router.get('/data/:symbol', getMarketData);
+
+// ThetaData endpoints (historical data)
+router.get('/historical/:symbol', getHistoricalOptions);
+router.get('/volatility/:symbol', getVolatility);
+router.get('/chain/:symbol/:expiration', getOptionsChain);
 
 export default router;
