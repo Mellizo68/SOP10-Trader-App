@@ -37,7 +37,9 @@ export const useExpirations = (symbol: string | null) => {
         error: null,
       }))
 
-      const response = await fetch(`/api/expirations/${symbol.toUpperCase()}`)
+      const isDev = import.meta.env.DEV
+      const apiOrigin = isDev ? 'http://localhost:8080' : window.location.origin
+      const response = await fetch(`${apiOrigin}/api/expirations/${symbol.toUpperCase()}`)
 
       if (!response.ok) {
         throw new Error(`Failed to fetch expirations: ${response.statusText}`)

@@ -1,6 +1,7 @@
 import React from 'react';
 import { AlertCircle } from 'lucide-react';
 import type { GEXData, GammaFlipData } from '../../hooks/useMarketData';
+import { useDataChangeAnimation } from '../../hooks/useDataChangeAnimation';
 
 interface GEXCardProps {
   gex: GEXData | null;
@@ -14,6 +15,8 @@ interface GEXCardProps {
  * Displays Gamma Exposure data and Gamma Flip warning
  */
 export const GEXCard: React.FC<GEXCardProps> = ({ gex, gammaFlip, loading, error }) => {
+  const gexAnimation = useDataChangeAnimation(gex?.gex);
+
   if (error) {
     return (
       <div className="bg-red-50 border border-red-200 rounded-lg p-4">
@@ -63,7 +66,7 @@ export const GEXCard: React.FC<GEXCardProps> = ({ gex, gammaFlip, loading, error
         </div>
 
         {/* GEX Value */}
-        <div className="bg-white rounded p-3 border border-blue-100">
+        <div className={`bg-white rounded p-3 border border-blue-100 transition-all ${gexAnimation.animationClass}`}>
           <div className="text-2xl font-bold text-blue-600">
             ${(gex.gex / 1000000).toFixed(1)}M
           </div>

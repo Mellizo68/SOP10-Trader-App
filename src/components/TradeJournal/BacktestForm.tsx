@@ -51,7 +51,9 @@ export const BacktestForm: React.FC<BacktestFormProps> = ({ symbol = 'SPY', onBa
   useEffect(() => {
     const fetchStrategies = async () => {
       try {
-        const response = await fetch('/api/backtest/strategies')
+        const isDev = import.meta.env.DEV
+        const apiOrigin = isDev ? 'http://localhost:8080' : window.location.origin
+        const response = await fetch(`${apiOrigin}/api/backtest/strategies`)
         const data = await response.json()
         if (data.success && Array.isArray(data.data)) {
           setAvailableStrategies(data.data)
@@ -81,7 +83,9 @@ export const BacktestForm: React.FC<BacktestFormProps> = ({ symbol = 'SPY', onBa
     setError(null)
 
     try {
-      const response = await fetch('/api/backtest/run', {
+      const isDev = import.meta.env.DEV
+      const apiOrigin = isDev ? 'http://localhost:8080' : window.location.origin
+      const response = await fetch(`${apiOrigin}/api/backtest/run`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

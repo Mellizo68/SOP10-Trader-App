@@ -1,6 +1,7 @@
 import React from 'react';
 import type { GreeksData } from '../../hooks/useMarketData';
 import { VirtualizedTable } from '../VirtualizedTable';
+import { useRowChangeAnimation } from '../../hooks/useRowChangeAnimation';
 
 interface GreeksTableProps {
   greeks: GreeksData[];
@@ -13,6 +14,8 @@ interface GreeksTableProps {
  * Displays Delta, Gamma, Theta, Vega, IV for multiple options
  */
 const GreeksTableComponent: React.FC<GreeksTableProps> = ({ greeks, loading, error }) => {
+  const animatingRows = useRowChangeAnimation(greeks, 'strike');
+
   if (error) {
     return (
       <div className="bg-red-50 border border-red-200 rounded-lg p-4">
@@ -157,6 +160,10 @@ const GreeksTableComponent: React.FC<GreeksTableProps> = ({ greeks, loading, err
         columns={columns}
         rowHeight={40}
         maxHeight={600}
+        getRowClassName={(index) => {
+          const strike = greeks[index]?.strike;
+          return animatingRows.has(strike) ? 'animate-row-highlight' : '';
+        }}
       />
     </div>
   );

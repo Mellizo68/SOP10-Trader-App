@@ -13,6 +13,7 @@ import {
   getHistoricalOptions,
   getVolatility,
   getOptionsChain,
+  getAdvancedMetrics,
 } from '../controllers/marketController';
 
 const router = Router();
@@ -55,5 +56,8 @@ router.get('/data/:symbol', getMarketData);
 router.get('/historical/:symbol', getHistoricalOptions);
 router.get('/volatility/:symbol', getVolatility);
 router.get('/chain/:symbol/:expiration', getOptionsChain);
+
+// Advanced metrics (real-time streaming via WebSocket, REST fallback)
+router.get('/advanced-metrics/:symbol', getAdvancedMetrics);
 
 export default router;

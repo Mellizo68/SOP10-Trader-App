@@ -35,9 +35,10 @@ const SetupValidator = lazy(() => import('./components/SetupValidator'))
 const ExitCalculator = lazy(() => import('./components/ExitCalculator'))
 const ImageExtractor = lazy(() => import('./components/ImageExtractor'))
 const TradeJournal = lazy(() => import('./components/TradeJournal'))
+const AnalyticsTab = lazy(() => import('./components/Analytics').then(m => ({ default: m.AnalyticsTab })))
 
 function App() {
-  const [activeModule, setActiveModule] = useState<'validator' | 'calculator' | 'extractor' | 'journal'>('extractor')
+  const [activeModule, setActiveModule] = useState<'validator' | 'calculator' | 'extractor' | 'journal' | 'analytics'>('extractor')
   const [validatorData, setValidatorData] = useState<SetupValidation | null>(null)
   const [latestValidationResult, setLatestValidationResult] = useState<ValidationResult | null>(null)
 
@@ -122,27 +123,15 @@ function App() {
           >
             📓 Trade Journal
           </button>
-
-          {/* Sentry Test Button (Phase 7) */}
           <button
-            onClick={() => {
-              try {
-                throw new Error('Test Sentry Error - Phase 7 Verification')
-              } catch (error) {
-                // Manually capture the error in Sentry
-                if (Sentry && typeof Sentry.captureException === 'function') {
-                  Sentry.captureException(error as Error, {
-                    tags: { test: 'sentry-verification', phase: '7' },
-                  })
-                }
-                // Also log to console for debugging
-                console.error('Error sent to Sentry:', error)
-              }
-            }}
-            className="ml-auto px-4 py-2 rounded-lg bg-red-900/50 text-red-300 hover:bg-red-900 text-sm font-semibold transition-all"
-            title="Test error tracking"
+            onClick={() => setActiveModule('analytics')}
+            className={`px-6 py-2 rounded-lg font-bold transition-all ${
+              activeModule === 'analytics'
+                ? 'bg-cyan-600 text-white'
+                : 'bg-slate-800 text-gray-400 hover:text-white'
+            }`}
           >
-            🧪 Test Sentry
+            📊 Analytics
           </button>
         </div>
       </div>
@@ -171,6 +160,11 @@ function App() {
         {activeModule === 'journal' && (
           <Suspense fallback={<LoadingSpinner />}>
             <TradeJournal validationResult={latestValidationResult || undefined} />
+          </Suspense>
+        )}
+        {activeModule === 'analytics' && (
+          <Suspense fallback={<LoadingSpinner />}>
+            <AnalyticsTab />
           </Suspense>
         )}
       </div>

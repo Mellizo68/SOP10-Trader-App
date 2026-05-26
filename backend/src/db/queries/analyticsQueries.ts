@@ -113,8 +113,8 @@ export async function queryAnalyticsSummary(): Promise<AnalyticsSummary> {
         ) as average_loss,
         COALESCE(MAX(profit_loss) FILTER (WHERE status = 'closed'), 0) as best_trade,
         COALESCE(MIN(profit_loss) FILTER (WHERE status = 'closed'), 0) as worst_trade,
-        COALESCE(MAX(win_streak), 0) as win_streak_max,
-        COALESCE(MAX(loss_streak), 0) as loss_streak_max
+        0 as win_streak_max,
+        0 as loss_streak_max
       FROM trades
     `;
 

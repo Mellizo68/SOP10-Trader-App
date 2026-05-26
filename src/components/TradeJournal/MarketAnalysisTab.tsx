@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { RefreshCw, ChevronDown } from 'lucide-react';
+import { RefreshCw, ChevronDown, Zap, Circle, AlertCircle } from 'lucide-react';
 import { useMarketData } from '../../hooks/useMarketData';
+import { useRealtimeMarket } from '../../hooks/useRealtimeMarket';
 import { useSymbolDiscovery } from '../../hooks/useSymbolDiscovery';
 import { useExpirations } from '../../hooks/useExpirations';
 import { GEXCard } from './GEXCard';
@@ -8,6 +9,7 @@ import { GreeksTable } from './GreeksTable';
 import { VirtualizedTable } from '../VirtualizedTable';
 import { HistoricalGreeksChart } from './HistoricalGreeksChart';
 import { BacktestForm } from './BacktestForm';
+import { AdvancedMetricsTab } from './AdvancedMetricsTab';
 
 interface MarketAnalysisTabProps {
   symbol?: string;
@@ -43,7 +45,7 @@ const MarketAnalysisTabComponent: React.FC<MarketAnalysisTabProps> = ({
   const [showExpirationDropdown, setShowExpirationDropdown] = useState(false);
 
   // View tabs
-  const [activeTab, setActiveTab] = useState<'realtime' | 'historical' | 'backtest'>('realtime');
+  const [activeTab, setActiveTab] = useState<'realtime' | 'historical' | 'backtest' | 'advanced-metrics'>('realtime');
 
   // Historical view state
   const [historicalStrike, setHistoricalStrike] = useState<number>(100);
@@ -65,12 +67,42 @@ const MarketAnalysisTabComponent: React.FC<MarketAnalysisTabProps> = ({
     [useCustomRange, customMin, customMax, strikeRange]
   );
 
-  // Fetch data using debounced symbol with strike filters
-  const { data, loading, error, lastUpdated, refetch } = useMarketData(
+  // Real-time WebSocket data (for <500ms latency on GEX, Greeks, Walls, Volume)
+  const realtimeState = useRealtimeMarket({
+    symbol: debouncedSymbol,
+  });
+
+  // REST API data (60s polling as fallback and for complete payload)
+  const restData = useMarketData(
     debouncedSymbol,
-    60000, // 60 second polling
+    60000,
     filterOptions
   );
+
+  // Merge: real-time updates enrich REST data for lowest latency display
+  // If real-time data is available and fresh, overlay it on REST response
+  const data = restData.data
+    ? {
+        ...restData.data,
+        // Use real-time metrics if available and fresh (< 1s old)
+        ...(realtimeState.lastUpdate && Date.now() - realtimeState.lastUpdate < 1000
+          ? {
+              gex: realtimeState.data?.gex || restData.data?.gex,
+              greeks: realtimeState.data?.greeks || restData.data?.greeks,
+              optionsWalls: realtimeState.data?.optionsWalls || restData.data?.optionsWalls,
+              volumeOI: realtimeState.data?.volumeOI || restData.data?.volumeOI,
+            }
+          : {}),
+      }
+    : restData.data;
+
+  const loading = restData.loading && !realtimeState.isConnected;
+  const error = realtimeState.isFailed
+    ? 'WebSocket connection failed. Using REST polling (60s latency).'
+    : restData.error;
+  const lastUpdated = realtimeState.lastUpdate
+    ? new Date(realtimeState.lastUpdate)
+    : restData.lastUpdated;
 
   const handleSymbolChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newSymbol = e.target.value.toUpperCase();
@@ -105,7 +137,7 @@ const MarketAnalysisTabComponent: React.FC<MarketAnalysisTabProps> = ({
   }, []);
 
   const handleRefresh = () => {
-    refetch();
+    restData.refetch();
   };
 
   return (
@@ -141,6 +173,16 @@ const MarketAnalysisTabComponent: React.FC<MarketAnalysisTabProps> = ({
           }`}
         >
           🔄 Backtest
+        </button>
+        <button
+          onClick={() => setActiveTab('advanced-metrics')}
+          className={`flex-1 px-4 py-2 rounded font-semibold transition-colors ${
+            activeTab === 'advanced-metrics'
+              ? 'bg-blue-500 text-white'
+              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+          }`}
+        >
+          ⚙️ Advanced
         </button>
       </div>
 
@@ -197,6 +239,39 @@ const MarketAnalysisTabComponent: React.FC<MarketAnalysisTabProps> = ({
             <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
             {loading ? 'Loading...' : 'Refresh'}
           </button>
+
+          {/* Connection Status Badge with Latency */}
+          <div className="mt-6 flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-lg border border-gray-200 text-sm">
+            {realtimeState.usesRestFallback ? (
+              <>
+                <AlertCircle size={16} className="text-orange-500 flex-shrink-0" />
+                <span className="text-orange-700 font-semibold">REST Fallback</span>
+                <span className="text-xs text-orange-600 ml-auto font-mono">60s</span>
+              </>
+            ) : realtimeState.isConnected ? (
+              <>
+                <Circle size={12} className="text-green-500 fill-green-500 flex-shrink-0 animate-latency-pulse" />
+                <span className="text-green-700 font-semibold">WebSocket Live</span>
+                {realtimeState.lastUpdate && (
+                  <>
+                    <span className="text-xs text-green-600 ml-auto font-mono">
+                      {Math.round((Date.now() - realtimeState.lastUpdate) / 1000)}s ago
+                    </span>
+                  </>
+                )}
+              </>
+            ) : realtimeState.isFailed ? (
+              <>
+                <AlertCircle size={16} className="text-red-500 flex-shrink-0" />
+                <span className="text-red-700 font-semibold">Connection Failed</span>
+              </>
+            ) : (
+              <>
+                <Circle size={12} className="text-yellow-500 fill-yellow-500 flex-shrink-0 animate-pulse" />
+                <span className="text-yellow-700 font-semibold">Connecting...</span>
+              </>
+            )}
+          </div>
         </div>
 
         {/* Strike Range Filtering Controls */}
@@ -446,12 +521,32 @@ const MarketAnalysisTabComponent: React.FC<MarketAnalysisTabProps> = ({
         </div>
       )}
 
-      {/* Last Updated */}
-      {lastUpdated && (
-        <div className="text-center text-xs text-gray-500 p-2">
-          Last updated: {lastUpdated.toLocaleTimeString()}
-        </div>
-      )}
+      {/* Last Updated with Latency Indicator */}
+      <div className="flex items-center justify-center gap-2 text-xs p-2">
+        {lastUpdated && (
+          <>
+            <span className="text-gray-500">
+              Last updated: {lastUpdated.toLocaleTimeString()}
+            </span>
+            <div
+              className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold ${
+                realtimeState.isConnected
+                  ? 'bg-green-100 text-green-700'
+                  : realtimeState.isFailed
+                  ? 'bg-orange-100 text-orange-700'
+                  : 'bg-blue-100 text-blue-700'
+              }`}
+            >
+              <Zap size={12} />
+              {realtimeState.isConnected
+                ? '<500ms'
+                : realtimeState.isFailed
+                ? '60s (fallback)'
+                : 'Connecting...'}
+            </div>
+          </>
+        )}
+      </div>
 
       {/* Loading State */}
       {loading && (
@@ -459,7 +554,9 @@ const MarketAnalysisTabComponent: React.FC<MarketAnalysisTabProps> = ({
           <div className="inline-block">
             <div className="animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full"></div>
           </div>
-          <p className="text-gray-600 text-sm mt-2">Fetching market data...</p>
+          <p className="text-gray-600 text-sm mt-2">
+            {realtimeState.isConnected ? 'Receiving real-time data...' : 'Fetching market data...'}
+          </p>
         </div>
       )}
         </>
@@ -538,6 +635,12 @@ const MarketAnalysisTabComponent: React.FC<MarketAnalysisTabProps> = ({
 
       {activeTab === 'backtest' && (
         <BacktestForm symbol={debouncedSymbol} />
+      )}
+
+      {activeTab === 'advanced-metrics' && (
+        <div className="bg-white rounded-lg border border-gray-200 p-4">
+          <AdvancedMetricsTab symbol={debouncedSymbol} />
+        </div>
       )}
     </div>
   );

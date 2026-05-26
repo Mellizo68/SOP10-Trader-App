@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { flashAlphaClient, GEXData, GreeksData, GammaFlipData, OptionsWallsData, VolumeOIData } from '../api/flashalpha-client';
-// TODO: Phase 9 - ThetaData client integration
-// import { thetaDataClient } from '../api/thetadata-client';
+import { thetaDataClient } from '../api/thetadata-client';
+import { AdvancedMetricsRegistry } from '../websocket/advancedMetricsPoller';
 import logger from '../utils/logger';
 import { cache } from '../utils/cache';
 //import { dedup } from '../utils/requestDedup';// import { dedup } from '../utils/requestDedup';
@@ -773,12 +773,48 @@ export const getHistoricalOptions = async (req: Request, res: Response) => {
       });
     }
 
-    // TODO: Phase 9 - ThetaData API integration
-    return res.status(501).json({
-      success: false,
-      error: 'Historical options are under development (Phase 9). Requires ThetaData API integration.',
-      code: 501,
-    });
+    // Fetch from ThetaData API
+    try {
+      const historicalData = await thetaDataClient.getHistoricalOptions(
+        upperSymbol,
+        startDate as string,
+        endDate as string,
+        strike ? parseInt(strike as string) : undefined,
+        expiration as string,
+        optionType as 'call' | 'put' | undefined
+      );
+
+      if (historicalData && historicalData.length > 0) {
+        // Store in cache for 24 hours
+        cache.set(cacheKey, historicalData, 86400);
+        logger.debug('Historical options fetched from ThetaData', {
+          symbol: upperSymbol,
+          expiration,
+          count: historicalData.length,
+        });
+
+        return res.json({
+          success: true,
+          data: historicalData,
+          cached: false,
+        });
+      } else {
+        return res.status(404).json({
+          success: false,
+          error: `No historical data found for ${symbol} expiring ${expiration}`,
+        });
+      }
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      logger.error('ThetaData historical options error', {
+        symbol: upperSymbol,
+        error: errorMsg,
+      });
+      return res.status(503).json({
+        success: false,
+        error: `Failed to fetch historical options: ${errorMsg}`,
+      });
+    }
   } catch (error) {
     logger.error('Error fetching historical options', {
       symbol: req.params.symbol,
@@ -824,12 +860,44 @@ export const getVolatility = async (req: Request, res: Response) => {
       });
     }
 
-    // TODO: Phase 9 - ThetaData API integration
-    return res.status(501).json({
-      success: false,
-      error: 'Volatility data is under development (Phase 9). Requires ThetaData API integration.',
-      code: 501,
-    });
+    // Fetch from ThetaData API
+    try {
+      const volatilityData = await thetaDataClient.getVolatility(
+        upperSymbol,
+        startDate as string | undefined,
+        endDate as string | undefined
+      );
+
+      if (volatilityData && volatilityData.length > 0) {
+        // Store in cache for 1 hour
+        cache.set(cacheKey, volatilityData, 3600);
+        logger.debug('Volatility data fetched from ThetaData', {
+          symbol: upperSymbol,
+          count: volatilityData.length,
+        });
+
+        return res.json({
+          success: true,
+          data: volatilityData,
+          cached: false,
+        });
+      } else {
+        return res.status(404).json({
+          success: false,
+          error: `No volatility data found for ${symbol}`,
+        });
+      }
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      logger.error('ThetaData volatility error', {
+        symbol: upperSymbol,
+        error: errorMsg,
+      });
+      return res.status(503).json({
+        success: false,
+        error: `Failed to fetch volatility data: ${errorMsg}`,
+      });
+    }
   } catch (error) {
     logger.error('Error fetching volatility data', {
       symbol: req.params.symbol,
@@ -880,11 +948,42 @@ export const getOptionsChain = async (req: Request, res: Response) => {
       });
     }
 
-    // ThetaData integration pending (Phase 9)
-    res.status(501).json({
-      success: false,
-      error: 'Options chain endpoint not yet implemented',
-    });
+    // Fetch from ThetaData API
+    try {
+      const chainData = await thetaDataClient.getOptionsChain(upperSymbol, expiration);
+
+      if (chainData && chainData.length > 0) {
+        // Store in cache for 30 minutes
+        cache.set(cacheKey, chainData, 1800);
+        logger.debug('Options chain fetched from ThetaData', {
+          symbol: upperSymbol,
+          expiration,
+          count: chainData.length,
+        });
+
+        return res.json({
+          success: true,
+          data: chainData,
+          cached: false,
+        });
+      } else {
+        return res.status(404).json({
+          success: false,
+          error: `No options contracts found for ${symbol} expiring ${expiration}`,
+        });
+      }
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      logger.error('ThetaData options chain error', {
+        symbol: upperSymbol,
+        expiration,
+        error: errorMsg,
+      });
+      return res.status(503).json({
+        success: false,
+        error: `Failed to fetch options chain: ${errorMsg}`,
+      });
+    }
   } catch (error) {
     logger.error('Error fetching options chain', {
       symbol: req.params.symbol,
@@ -894,6 +993,128 @@ export const getOptionsChain = async (req: Request, res: Response) => {
     res.status(503).json({
       success: false,
       error: 'Failed to fetch options chain',
+    });
+  }
+};
+
+/**
+ * GET /api/market/advanced-metrics/:symbol
+ * REST fallback endpoint for advanced metrics
+ * Used when WebSocket connection fails after 3 reconnection attempts
+ * Provides: Order Flow, Volatility Term Structure, Volatility Skew, Level 2 Order Book
+ *
+ * Example: /api/market/advanced-metrics/SPY
+ */
+export const getAdvancedMetrics = async (req: Request, res: Response) => {
+  try {
+    const { symbol } = req.params;
+
+    if (!symbol) {
+      return res.status(400).json({
+        success: false,
+        error: 'Symbol is required',
+      });
+    }
+
+    const upperSymbol = symbol.toUpperCase();
+    const cacheKey = `advanced-metrics:${upperSymbol}:fallback`;
+
+    // Check cache first (5 minute TTL for advanced metrics fallback)
+    let advancedData = cache.get(cacheKey);
+    if (advancedData) {
+      logger.debug('Advanced metrics from cache', { symbol: upperSymbol });
+      return res.json({
+        success: true,
+        data: advancedData,
+        cached: true,
+        source: 'fallback-cache',
+      });
+    }
+
+    // Use AdvancedMetricsRegistry to fetch fresh data
+    try {
+      const registry = new AdvancedMetricsRegistry({
+        onUpdate: (update) => {
+          // Store in cache for 5 minutes on update
+          cache.set(cacheKey, update, 300);
+        },
+        onError: (symbol, error) => {
+          logger.warn('Advanced metrics poller error', { symbol, error: error.message });
+        },
+      });
+
+      // Start polling and wait for first update
+      registry.startPoller(upperSymbol);
+
+      // Wait up to 2 seconds for initial update
+      const startTime = Date.now();
+      while (Date.now() - startTime < 2000) {
+        const cachedData = cache.get(cacheKey);
+        if (cachedData) {
+          registry.stopPoller(upperSymbol);
+          logger.debug('Advanced metrics fetched from poller', { symbol: upperSymbol });
+          return res.json({
+            success: true,
+            data: cachedData,
+            cached: false,
+            source: 'websocket-fallback',
+          });
+        }
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+
+      // Timeout waiting for data
+      registry.stopPoller(upperSymbol);
+      logger.warn('Advanced metrics poller timeout', { symbol: upperSymbol });
+
+      // Try to return any cached data as fallback
+      const anyData = cache.get(cacheKey, true);
+      if (anyData) {
+        return res.json({
+          success: true,
+          data: anyData,
+          cached: true,
+          source: 'stale-cache',
+          warning: 'Using stale data - poller timed out',
+        });
+      }
+
+      return res.status(503).json({
+        success: false,
+        error: `No advanced metrics available for ${symbol}`,
+      });
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      logger.error('Advanced metrics fetch error', {
+        symbol: upperSymbol,
+        error: errorMsg,
+      });
+
+      // Try to return any cached data as fallback
+      const anyData = cache.get(cacheKey, true);
+      if (anyData) {
+        return res.json({
+          success: true,
+          data: anyData,
+          cached: true,
+          source: 'error-recovery-cache',
+          warning: 'Using cached data - fetch failed',
+        });
+      }
+
+      return res.status(503).json({
+        success: false,
+        error: `Failed to fetch advanced metrics: ${errorMsg}`,
+      });
+    }
+  } catch (error) {
+    logger.error('Error in getAdvancedMetrics endpoint', {
+      symbol: req.params.symbol,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error processing advanced metrics request',
     });
   }
 };

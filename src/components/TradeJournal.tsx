@@ -5,6 +5,7 @@ import { apiClient } from '../api/tradeClient'
 import { loadTrades, clearTrades } from '../utils/localStorage'
 import { BarChart3, Download, Trash2 } from 'lucide-react'
 import { LoadingSpinner } from './LoadingSpinner'
+import { ExportDialog } from './TradeJournal/ExportDialog'
 
 // Lazy-loaded components
 // These are split into separate chunks and loaded on-demand when tabs are activated
@@ -12,7 +13,6 @@ import { LoadingSpinner } from './LoadingSpinner'
 const TradeInputForm = lazy(() => import('./TradeJournal/TradeInputForm'))
 const TradeHistoryTable = lazy(() => import('./TradeJournal/TradeHistoryTable'))
 const OverviewTab = lazy(() => import('./TradeJournal/OverviewTab'))
-const AnalyticsTab = lazy(() => import('./TradeJournal/AnalyticsTab'))
 const MarketAnalysisTab = lazy(() => import('./TradeJournal/MarketAnalysisTab'))
 
 interface TradeJournalProps {
@@ -21,9 +21,10 @@ interface TradeJournalProps {
 }
 
 const TradeJournal: React.FC<TradeJournalProps> = ({ validationResult, onTradeCreated }) => {
-  const [activeTab, setActiveTab] = useState<'overview' | 'trades' | 'analytics' | 'market-analysis'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'trades' | 'market-analysis'>('overview')
   const [trades, setTrades] = useState<TradeEntry[]>([])
   const [refreshTrigger, setRefreshTrigger] = useState(0)
+  const [isExportOpen, setIsExportOpen] = useState(false)
 
   // Cargar trades from API (with localStorage fallback)
   useEffect(() => {
@@ -54,16 +55,6 @@ const TradeJournal: React.FC<TradeJournalProps> = ({ validationResult, onTradeCr
     setRefreshTrigger(prev => prev + 1)
   }
 
-  const handleExportCSV = () => {
-    const csv = TradeJournalService.exportToCSV(trades)
-    const element = document.createElement('a')
-    const file = new Blob([csv], { type: 'text/csv' })
-    element.href = URL.createObjectURL(file)
-    element.download = `trades_${new Date().toISOString().split('T')[0]}.csv`
-    document.body.appendChild(element)
-    element.click()
-    document.body.removeChild(element)
-  }
 
   const handleClearAll = () => {
     if (window.confirm('¿Estás seguro de que quieres eliminar TODOS los trades? Esta acción no se puede deshacer.')) {
@@ -72,6 +63,8 @@ const TradeJournal: React.FC<TradeJournalProps> = ({ validationResult, onTradeCr
       setRefreshTrigger(prev => prev + 1)
     }
   }
+
+  const strategies = Array.from(new Set(trades.map(t => t.strategy).filter(Boolean)))
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black p-6">
@@ -108,16 +101,6 @@ const TradeJournal: React.FC<TradeJournalProps> = ({ validationResult, onTradeCr
             📈 Trades
           </button>
           <button
-            onClick={() => setActiveTab('analytics')}
-            className={`px-6 py-3 font-semibold transition-colors ${
-              activeTab === 'analytics'
-                ? 'text-blue-400 border-b-2 border-blue-500'
-                : 'text-gray-400 hover:text-gray-300'
-            }`}
-          >
-            🔍 Analytics
-          </button>
-          <button
             onClick={() => setActiveTab('market-analysis')}
             className={`px-6 py-3 font-semibold transition-colors ${
               activeTab === 'market-analysis'
@@ -150,11 +133,6 @@ const TradeJournal: React.FC<TradeJournalProps> = ({ validationResult, onTradeCr
               </div>
             </Suspense>
           )}
-          {activeTab === 'analytics' && (
-            <Suspense fallback={<LoadingSpinner message="Loading Analytics..." />}>
-              <AnalyticsTab trades={trades} />
-            </Suspense>
-          )}
           {activeTab === 'market-analysis' && (
             <Suspense fallback={<LoadingSpinner message="Loading Market Data..." />}>
               <MarketAnalysisTab symbol="SPY" />
@@ -165,11 +143,11 @@ const TradeJournal: React.FC<TradeJournalProps> = ({ validationResult, onTradeCr
         {/* Action Bar */}
         <div className="flex gap-4 justify-end">
           <button
-            onClick={handleExportCSV}
+            onClick={() => setIsExportOpen(true)}
             className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-semibold transition-colors"
           >
             <Download className="w-5 h-5" />
-            Export CSV
+            Export
           </button>
           <button
             onClick={handleClearAll}
@@ -179,6 +157,13 @@ const TradeJournal: React.FC<TradeJournalProps> = ({ validationResult, onTradeCr
             Clear All
           </button>
         </div>
+
+        <ExportDialog
+          trades={trades}
+          isOpen={isExportOpen}
+          onClose={() => setIsExportOpen(false)}
+          strategies={strategies}
+        />
 
         {/* Info */}
         <div className="mt-8 bg-gray-800/50 border border-gray-700 rounded-lg p-4">

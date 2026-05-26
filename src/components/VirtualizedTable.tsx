@@ -16,6 +16,7 @@ interface VirtualizedTableProps<T> {
   maxHeight?: number;
   headerClassName?: string;
   rowClassName?: string;
+  getRowClassName?: (index: number) => string;
 }
 
 export const VirtualizedTable = React.memo(
@@ -26,6 +27,7 @@ export const VirtualizedTable = React.memo(
     maxHeight = 600,
     headerClassName = '',
     rowClassName = '',
+    getRowClassName,
   }: VirtualizedTableProps<T>) {
     if (!data || data.length === 0) {
       return (
@@ -43,10 +45,12 @@ export const VirtualizedTable = React.memo(
       const row = data[index];
       if (!row) return null;
 
+      const dynamicRowClass = getRowClassName?.(index) || '';
+
       return (
         <div
           style={style}
-          className={`flex border-b border-gray-100 hover:bg-gray-50 ${rowClassName}`}
+          className={`flex border-b border-gray-100 hover:bg-gray-50 ${rowClassName} ${dynamicRowClass}`}
         >
           {columns.map((col, colIdx) => (
             <div

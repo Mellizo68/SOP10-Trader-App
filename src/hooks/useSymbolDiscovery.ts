@@ -28,7 +28,9 @@ export const useSymbolDiscovery = (query?: string) => {
         error: null,
       }))
 
-      const url = new URL('/api/symbols', window.location.origin)
+      const isDev = import.meta.env.DEV
+      const apiOrigin = isDev ? 'http://localhost:8080' : window.location.origin
+      const url = new URL('/api/symbols', apiOrigin)
       if (query) {
         url.searchParams.set('q', query)
       }

@@ -134,6 +134,10 @@ async function initializeDatabase() {
 }
 
 async function startServer() {
+  // Load environment variables from .env file
+  const dotenv = (await import('dotenv')).default
+  dotenv.config()
+
   // Initialize database first (non-blocking - continues even if DB init fails)
   try {
     await initializeDatabase()
@@ -192,12 +196,16 @@ async function startServer() {
   const historicalRouter = (await import('./routes/historical.js')).default
   const backtestingRouter = (await import('./routes/backtesting.js')).default
   const analyticsRouter = (await import('./routes/analytics.js')).default
+  const exportRouter = (await import('./routes/export.js')).default
+  const backupRouter = (await import('./routes/backup.js')).default
 
   // Register routes
   app.use('/api/trades', tradesRouter)
   app.use('/api/market', marketRouter)
   app.use('/api/stats', statsRouter)
   app.use('/api/analytics', analyticsRouter)
+  app.use('/api/export', exportRouter)
+  app.use('/api/backup', backupRouter)
   app.use('/api', discoveryRouter)
   app.use('/api', historicalRouter)
   app.use('/api', backtestingRouter)
@@ -230,10 +238,20 @@ async function startServer() {
     })
   })
 
-  // Start
+  // Start REST API
   app.listen(PORT, () => {
-    console.log(`✅ Server running on http://localhost:${PORT}`)
+    console.log(`✅ REST API running on http://localhost:${PORT}`)
   })
+
+  // Start WebSocket server for real-time market data
+  try {
+    const { getWebSocketServer } = await import('./websocket/server.js')
+    const wsPort = process.env.WS_PORT ? parseInt(process.env.WS_PORT, 10) : 8081
+    getWebSocketServer(wsPort)
+    console.log(`✅ WebSocket server running on ws://localhost:${wsPort}`)
+  } catch (error) {
+    console.warn('⚠️  WebSocket server failed to start:', error instanceof Error ? error.message : error)
+  }
 }
 
 startServer().catch(err => {
