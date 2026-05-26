@@ -22,7 +22,7 @@ export class SymbolPoller {
   private pollers: Map<string, NodeJS.Timeout> = new Map()
   private callbacks: PollerCallback
   private updateBuffer: Partial<MarketUpdate> = {}
-  private bufferFlushInterval: number = 100 // volatile data: 100ms
+  private bufferFlushInterval: number = 1000 // stable display: 1s between batches
   private bufferTimer: NodeJS.Timeout | null = null
   private pollInterval: number = 500 // 0.5s between ThetaData calls
 
