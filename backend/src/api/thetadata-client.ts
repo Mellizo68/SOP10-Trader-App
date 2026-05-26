@@ -67,7 +67,7 @@ class ThetaDataClient {
     }
 
     // Check if Python SDK is available
-    this.checkPythonAvailability();
+    // this.checkPythonAvailability();
   }
 
   /**
